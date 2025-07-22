@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Store Placement Visualizer</title>
+</head>
+<body>
+
+  <!-- 📬 Contact Section -->
+  <h2>📬 Contact</h2>
+  <p>Feel free to connect:</p>
+  <ul>
+    <li><strong>GitHub:</strong> <a href="https://github.com/Ronit049" target="_blank">Ronit049</a></li>
+    <li><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/ronit-raj-114181315" target="_blank">Ronit Raj</a></li>
+    <li><strong>X (Twitter):</strong> <a href="https://x.com/its_rsr04" target="_blank">@its_rsr04</a></li>
+  </ul>
+
+  <!-- 📃 License Section -->
+  <h2>📃 License</h2>
+  <p>This project is open-source and available under the <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a>.</p>
+
+  <!-- 📦 Requirements.txt Section -->
+  <h2>📦 Requirements</h2>
+  <p>To install all necessary Python libraries, use the following <code>requirements.txt</code> file:</p>
+  <pre><code>pandas
+numpy
+scikit-learn
+folium
+matplotlib
+plotly
+streamlit
+seaborn
+</code></pre>
+
+  <p><strong>Optional additions (if needed):</strong></p>
+  <ul>
+    <li><code>geopandas</code> – for geospatial operations</li>
+    <li><code>sqlalchemy</code> – for database connections</li>
+    <li><code>faker</code> – for generating fake data</li>
+  </ul>
+
+  <p>💡 Install with:</p>
+  <pre><code>pip install -r requirements.txt</code></pre>
+
+</body>
+</html>
 
