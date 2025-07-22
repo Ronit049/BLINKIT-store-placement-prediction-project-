@@ -1,3 +1,13 @@
+<h2>📃 License</h2>
+<p>This project is open-source and available under the <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a>.</p>
+<h2>📬 Contact</h2>
+<p>Feel free to connect:</p>
+<ul>
+  <li><strong>GitHub:</strong> <a href="https://github.com/Ronit049" target="_blank">Ronit049</a></li>
+  <li><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/ronit-raj-114181315" target="_blank">Ronit Raj</a></li>
+  <li><strong>X (Twitter):</strong> <a href="https://x.com/its_rsr04" target="_blank">@its_rsr04</a></li>
+</ul>
+
 # 🗺️ Store Placement Visualizer
 
 > A data-driven decision support tool to help businesses identify ideal locations for new store placement using predictive modeling and geospatial visualization.
@@ -151,12 +161,3 @@ seaborn
 Ronit Raj – Data Science & Visualization
 
 
-<h2>📃 License</h2>
-<p>This project is open-source and available under the <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a>.</p>
-<h2>📬 Contact</h2>
-<p>Feel free to connect:</p>
-<ul>
-  <li><strong>GitHub:</strong> <a href="https://github.com/Ronit049" target="_blank">Ronit049</a></li>
-  <li><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/ronit-raj-114181315" target="_blank">Ronit Raj</a></li>
-  <li><strong>X (Twitter):</strong> <a href="https://x.com/its_rsr04" target="_blank">@its_rsr04</a></li>
-</ul>
