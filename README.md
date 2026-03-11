@@ -1,4 +1,5 @@
-<img src = "Blinkit store placement.jpg">
+
+<img src="Blinkit store placement.jpg" alt="Blinkit">
 <h2>📃 License</h2>
 <p>This project is open-source and available under the <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a>.</p>
 <h2>📬 Contact</h2>
