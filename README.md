@@ -16,7 +16,7 @@
 
 ---
 
-## 🚀 Project Overview
+## 🚀 Project Overviews :-
 
 In competitive markets, selecting the right store location is crucial for business success. Our project, **Store Placement Visualizer**, uses geospatial data, clustering algorithms, and a scoring system to recommend the most optimal areas for placing a new store.
 
