@@ -58,16 +58,16 @@ Many businesses struggle with store placement due to a lack of actionable data i
 
 ## 📁 Project Structure
 
-store-placement-visualizer/
-│
-├── data/ # Datasets (raw & processed)
-├── notebooks/ # Jupyter notebooks
-├── src/ # Core logic (scripts)
-├── ui/ # Streamlit app (optional)
-├── images/ # Output map visuals
-├── requirements.txt # Python dependencies
-├── README.md # Project overview
-└── .gitignore # Ignore temp/system files
+store-placement-visualizer/  
+│  
+├── data/ # Datasets (raw & processed)  
+├── notebooks/ # Jupyter notebooks  
+├── src/ # Core logic (scripts)  
+├── ui/ # Streamlit app (optional)  
+├── images/ # Output map visuals  
+├── requirements.txt # Python dependencies  
+├── README.md # Project overview  
+└── .gitignore # Ignore temp/system files  
 
 
 
