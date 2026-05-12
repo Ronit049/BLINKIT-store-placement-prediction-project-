@@ -1,0 +1,87 @@
+# Sample Output: Map Screenshot for Blinkit Store Placement
+
+## Objective
+
+The objective of this output is to show the best location for a new **Blinkit store / dark store** using a map-based visualization.
+
+The map helps to identify:
+
+- High customer demand areas
+- Existing Blinkit store locations
+- Proposed new store location
+- Delivery coverage radius
+- High-demand zones using heatmap
+
+---
+
+## Map View Description
+
+The map screenshot shows a city or locality map where different markers and colors are used to represent customer demand and store placement.
+
+### Main Elements Shown on the Map
+
+1. **Customer Demand Points**
+   - Represented using small blue markers.
+   - These points show customer order locations.
+   - Example locations:
+     - Hostels
+     - Apartments
+     - PGs
+     - Residential colonies
+
+2. **Existing Blinkit Stores**
+   - Represented using green markers.
+   - These show already available Blinkit stores in the area.
+   - They help in understanding the current service coverage.
+
+3. **Proposed New Blinkit Store**
+   - Represented using a red marker or star icon.
+   - Label used on map:
+     - `Proposed Blinkit Store`
+   - This is the selected best location for opening a new store.
+
+4. **Delivery Coverage Radius**
+   - A circular boundary is drawn around the proposed store.
+   - Example radius:
+     - `2 km`
+     - `3 km`
+   - This shows the area that can be served quickly from the proposed store.
+
+5. **High-Demand Zone**
+   - Shown using heatmap colors.
+   - The heatmap helps identify areas with maximum customer orders.
+
+---
+
+## Heatmap Color Meaning
+
+| Color | Meaning |
+|---|---|
+| Red | High customer demand |
+| Yellow | Medium customer demand |
+| Green | Low customer demand |
+
+---
+
+## Map Legend
+
+| Map Element | Color / Icon | Meaning |
+|---|---|---|
+| Customer Locations | Blue dots | Customer order points |
+| Existing Blinkit Stores | Green markers | Already available stores |
+| Proposed Store | Red marker / star | Best selected store location |
+| Delivery Radius | Transparent circle | Service coverage area |
+| Heatmap | Red, yellow, green | Demand intensity |
+
+---
+
+## Sample Output Representation
+
+```text
+[Map Screenshot]
+
+Blue Points  = Customer Locations
+Green Points = Existing Blinkit Stores
+Red Marker   = Proposed Blinkit Store
+Circle       = 2 km Delivery Radius
+Heatmap      = High Demand Area
