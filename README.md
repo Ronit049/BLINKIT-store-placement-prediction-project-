@@ -157,6 +157,14 @@ seaborn
 
 </body>
 </html>
+```
+Output Explanation
+
+The system identifies the best location for a new Blinkit dark store by analyzing customer demand points, existing store locations, and delivery distance.
+
+The proposed store location is marked on the map using a red marker. A circular delivery radius is drawn around the proposed store to show the coverage area.
+
+The store is placed near the center of the high-demand zone so that maximum customers can be served in minimum delivery time.
 
 
 👥 Team
