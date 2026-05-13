@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlinkPredict — Blinkit Store Placement Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blinkit-yellow: #F9D000;
+    --blinkit-green: #0C831F;
+    --blinkit-dark: #0D1117;
+    --blinkit-card: #161B22;
+    --blinkit-border: #21262D;
+    --blinkit-text: #E6EDF3;
+    --blinkit-muted: #7D8590;
+    --blinkit-accent: #F9D000;
+    --score-high: #39D353;
+    --score-mid: #F9D000;
+    --score-low: #F85149;
+    --radius: 16px;
+    --glow: 0 0 40px rgba(249,208,0,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--blinkit-dark);
+    color: var(--blinkit-text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* === NOISE TEXTURE === */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  /* === HEADER === */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,17,23,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--blinkit-border);
+    padding: 0 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 1.3rem;
+    text-decoration: none; color: inherit;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--blinkit-yellow);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo span { color: var(--blinkit-yellow); }
+
+  nav { display: flex; gap: 8px; }
+  nav a {
+    color: var(--blinkit-muted); text-decoration: none;
+    font-size: 0.9rem; padding: 8px 14px; border-radius: 8px;
+    transition: all 0.2s;
+  }
+  nav a:hover { color: var(--blinkit-text); background: var(--blinkit-border); }
+  nav a.active { color: var(--blinkit-yellow); }
+
+  .header-cta {
+    background: var(--blinkit-yellow); color: #000;
+    border: none; border-radius: 10px;
+    padding: 8px 18px; font-size: 0.85rem;
+    font-family: 'DM Sans', sans-serif; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .header-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(249,208,0,0.3); }
+
+  /* === HERO === */
+  .hero {
+    position: relative; z-index: 1;
+    padding: 80px 32px 60px;
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(249,208,0,0.1);
+    border: 1px solid rgba(249,208,0,0.3);
+    color: var(--blinkit-yellow);
+    border-radius: 100px; padding: 6px 14px; font-size: 0.8rem;
+    font-weight: 500; margin-bottom: 24px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .hero-badge::before { content: '⚡'; }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.2rem, 4vw, 3.2rem);
+    font-weight: 800; line-height: 1.1;
+    margin-bottom: 20px;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+
+  h1 .highlight {
+    color: var(--blinkit-yellow);
+    position: relative;
+  }
+
+  .hero-sub {
+    color: var(--blinkit-muted); font-size: 1.05rem; line-height: 1.7;
+    margin-bottom: 36px;
+    animation: fadeDown 0.6s 0.2s ease both;
+  }
+
+  .hero-actions {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    animation: fadeDown 0.6s 0.3s ease both;
+  }
+
+  .btn-primary {
+    background: var(--blinkit-yellow); color: #000;
+    border: none; border-radius: 12px;
+    padding: 14px 28px; font-size: 0.95rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(249,208,0,0.35); }
+
+  .btn-secondary {
+    background: transparent; color: var(--blinkit-text);
+    border: 1px solid var(--blinkit-border); border-radius: 12px;
+    padding: 14px 28px; font-size: 0.95rem; font-weight: 500;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { background: var(--blinkit-border); }
+
+  /* Hero Stats */
+  .hero-stats {
+    display: flex; gap: 24px; margin-top: 40px;
+    animation: fadeDown 0.6s 0.4s ease both;
+  }
+  .stat { border-left: 2px solid var(--blinkit-border); padding-left: 16px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--blinkit-yellow); }
+  .stat-label { font-size: 0.8rem; color: var(--blinkit-muted); margin-top: 2px; }
+
+  /* Hero Visual */
+  .hero-visual {
+    animation: fadeUp 0.8s 0.2s ease both;
+    position: relative;
+  }
+
+  .map-preview {
+    background: var(--blinkit-card);
+    border: 1px solid var(--blinkit-border);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: var(--glow);
+    position: relative; overflow: hidden;
+  }
+
+  .map-preview::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 70% 30%, rgba(249,208,0,0.06) 0%, transparent 60%);
+  }
+
+  .map-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .map-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; }
+  .map-live { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--score-high); }
+  .map-live::before { content: ''; width: 6px; height: 6px; background: var(--score-high); border-radius: 50%; animation: pulse 2s infinite; }
+
+  .map-svg-area {
+    width: 100%; aspect-ratio: 16/10;
+    background: #0a1520;
+    border-radius: 12px;
+    position: relative; overflow: hidden;
+  }
+
+  /* Animated map zones */
+  .zone {
+    position: absolute; border-radius: 50%;
+    opacity: 0; animation: zoneAppear 1s ease forwards;
+  }
+  .zone-a { width: 90px; height: 90px; background: radial-gradient(circle, rgba(57,211,83,0.6), transparent); top: 20%; left: 15%; animation-delay: 0.8s; }
+  .zone-b { width: 70px; height: 70px; background: radial-gradient(circle, rgba(57,211,83,0.5), transparent); top: 50%; left: 55%; animation-delay: 1s; }
+  .zone-c { width: 55px; height: 55px; background: radial-gradient(circle, rgba(249,208,0,0.5), transparent); top: 30%; left: 60%; animation-delay: 1.2s; }
+  .zone-d { width: 45px; height: 45px; background: radial-gradient(circle, rgba(248,81,73,0.5), transparent); top: 65%; left: 25%; animation-delay: 1.4s; }
+  .zone-e { width: 60px; height: 60px; background: radial-gradient(circle, rgba(249,208,0,0.4), transparent); top: 15%; left: 70%; animation-delay: 1.1s; }
+
+  .map-grid-lines {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+
+  .map-pin {
+    position: absolute; display: flex; flex-direction: column; align-items: center;
+    animation: pinDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    opacity: 0;
+  }
+  .map-pin-icon {
+    width: 24px; height: 24px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; transform: rotate(-45deg);
+  }
+  .map-pin-icon span { transform: rotate(45deg); display: block; }
+
+  .pin-best { background: var(--score-high); animation-delay: 1.5s; top: 22%; left: 17%; }
+  .pin-best .map-pin-icon { background: var(--score-high); }
+
+  .pin-good { background: var(--blinkit-yellow); top: 52%; left: 57%; animation-delay: 1.7s; }
+  .pin-good .map-pin-icon { background: var(--blinkit-yellow); }
+
+  .map-legend {
+    display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--blinkit-muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* === MAIN CONTENT === */
+  main { max-width: 1200px; margin: 0 auto; padding: 0 32px 80px; position: relative; z-index: 1; }
+
+  /* Section header */
+  .section-header { margin-bottom: 32px; }
+  .section-tag {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--blinkit-yellow);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem; font-weight: 800;
+  }
+  .section-sub { color: var(--blinkit-muted); font-size: 0.95rem; margin-top: 8px; }
+
+  /* === PREDICTION FORM === */
+  .prediction-section {
+    background: var(--blinkit-card);
+    border: 1px solid var(--blinkit-border);
+    border-radius: 24px; padding: 40px;
+    margin-bottom: 48px;
+    box-shadow: var(--glow);
+    position: relative; overflow: hidden;
+  }
+
+  .prediction-section::before {
+    content: '';
+    position: absolute; top: -100px; right: -100px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(249,208,0,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .form-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 8px; }
+  .form-group.full-width { grid-column: 1 / -1; }
+  .form-group.half-width { grid-column: span 2; }
+
+  label {
+    font-size: 0.82rem; font-weight: 500; color: var(--blinkit-muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  label .required { color: var(--blinkit-yellow); }
+
+  .input-wrapper { position: relative; }
+
+  input[type="text"], input[type="number"], select, textarea {
+    width: 100%;
+    background: #0D1117;
+    border: 1px solid var(--blinkit-border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--blinkit-text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--blinkit-yellow);
+    box-shadow: 0 0 0 3px rgba(249,208,0,0.1);
+  }
+
+  select { cursor: pointer; }
+
+  .input-icon {
+    position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--blinkit-muted); font-size: 14px; pointer-events: none;
+  }
+
+  /* Slider */
+  .slider-group { grid-column: span 1; }
+  .slider-header { display: flex; justify-content: space-between; }
+  .slider-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; color: var(--blinkit-yellow); font-size: 0.9rem;
+  }
+
+  input[type="range"] {
+    width: 100%; height: 6px;
+    background: var(--blinkit-border);
+    border-radius: 3px; outline: none; border: none;
+    cursor: pointer; padding: 0;
+    -webkit-appearance: none;
+    accent-color: var(--blinkit-yellow);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    background: var(--blinkit-yellow);
+    border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 8px rgba(249,208,0,0.5);
+  }
+
+  /* Weight controls */
+  .weights-section {
+    background: #0D1117;
+    border: 1px solid var(--blinkit-border);
+    border-radius: 12px; padding: 20px;
+    margin-bottom: 24px;
+  }
+  .weights-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 16px; color: var(--blinkit-muted); }
+  .weights-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  .weight-item label { justify-content: space-between; }
+
+  /* Predict button */
+  .predict-btn {
+    width: 100%;
+    background: var(--blinkit-yellow); color: #000;
+    border: none; border-radius: 14px;
+    padding: 18px; font-size: 1rem; font-weight: 700;
+    font-family: 'Syne', sans-serif; cursor: pointer;
+    transition: all 0.3s; letter-spacing: 0.02em;
+    position: relative; overflow: hidden;
+  }
+  .predict-btn::before {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+  }
+  .predict-btn:hover::before { left: 100%; }
+  .predict-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(249,208,0,0.4); }
+  .predict-btn:active { transform: translateY(0); }
+
+  /* === RESULTS === */
+  #results { display: none; margin-bottom: 48px; }
+  #results.visible { display: block; animation: fadeUp 0.5s ease; }
+
+  .result-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+
+  /* Score Card */
+  .score-card {
+    background: var(--blinkit-card);
+    border: 1px solid var(--blinkit-border);
+    border-radius: 20px; padding: 32px;
+    position: relative; overflow: hidden;
+  }
+
+  .score-card.highlight {
+    border-color: rgba(249,208,0,0.4);
+    box-shadow: 0 0 60px rgba(249,208,0,0.08);
+  }
+
+  .score-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
+  .score-location { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; }
+  .score-coords { font-size: 0.8rem; color: var(--blinkit-muted); margin-top: 4px; }
+
+  .score-badge {
+    padding: 6px 14px; border-radius: 100px;
+    font-size: 0.8rem; font-weight: 600;
+  }
+  .badge-excellent { background: rgba(57,211,83,0.15); color: var(--score-high); border: 1px solid rgba(57,211,83,0.3); }
+  .badge-good { background: rgba(249,208,0,0.15); color: var(--blinkit-yellow); border: 1px solid rgba(249,208,0,0.3); }
+  .badge-poor { background: rgba(248,81,73,0.15); color: var(--score-low); border: 1px solid rgba(248,81,73,0.3); }
+
+  /* Circular Score */
+  .score-circle-container { display: flex; align-items: center; gap: 32px; margin-bottom: 28px; }
+  .score-circle {
+    position: relative; width: 120px; height: 120px; flex-shrink: 0;
+  }
+  .score-circle svg { transform: rotate(-90deg); }
+  .score-circle-bg { fill: none; stroke: var(--blinkit-border); stroke-width: 8; }
+  .score-circle-progress {
+    fill: none; stroke-width: 8; stroke-linecap: round;
+    stroke-dasharray: 283;
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .score-circle-text {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .score-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem; font-weight: 800; line-height: 1;
+  }
+  .score-label { font-size: 0.7rem; color: var(--blinkit-muted); }
+
+  .score-breakdown { flex: 1; }
+  .breakdown-item { margin-bottom: 12px; }
+  .breakdown-header { display: flex; justify-content: space-between; font-size: 0.83rem; margin-bottom: 5px; }
+  .breakdown-bar {
+    height: 6px; background: var(--blinkit-border);
+    border-radius: 3px; overflow: hidden;
+  }
+  .breakdown-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 1s ease;
+  }
+
+  /* Metrics mini cards */
+  .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .metric-mini {
+    background: #0D1117;
+    border: 1px solid var(--blinkit-border);
+    border-radius: 12px; padding: 14px;
+    text-align: center;
+  }
+  .metric-mini-value { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; }
+  .metric-mini-label { font-size: 0.72rem; color: var(--blinkit-muted); margin-top: 2px; }
+
+  /* Side panel */
+  .side-panel { display: flex; flex-direction: column; gap: 16px; }
+
+  .verdict-card {
+    background: var(--blinkit-card);
+    border: 1px solid var(--blinkit-border);
+    border-radius: 20px; padding: 24px;
+  }
+
+  .verdict-title { font-family: 'Syne', sans-serif; font-weight: 700; margin-bottom: 16px; font-size: 0.95rem; }
+  .verdict-icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+  .verdict-text { font-size: 0.85rem; line-height: 1.6; color: var(--blinkit-muted); }
+
+  .action-items { list-style: none; }
+  .action-items li {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid var(--blinkit-border);
+    font-size: 0.85rem; line-height: 1.5;
+  }
+  .action-items li:last-child { border-bottom: none; }
+  .action-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* === MAP VISUALIZATION === */
+  .map-full-section {
+    background: var(--blinkit-card);
+    border: 1px solid var(--blinkit-border);
+    border-radius: 24px; padding: 32px;
+    margin-bottom: 48px;
+  }
+
+  .map-full {
+    width: 100%; height: 440px;
+    background: #040d18;
+    border-radius: 16px;
+    position: relative; overflow: hidden;
+    margin-top: 24px;
+  }
+
+  .map-full canvas { width: 100%; height: 100%; }
+
+  /* === TOP ZONES TABLE === */
+  .zones-section {
+    background: var(--blinkit-card);
+    border: 1px solid var(--blinkit-border);
+    border-radius: 24px; padding: 32px;
+    margin-bottom: 48px;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+  thead th {
+    text-align: left; padding: 10px 16px;
+    font-size: 0.78rem; font-weight: 600; color: var(--blinkit-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--blinkit-border);
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--blinkit-border);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 14px 16px; font-size: 0.88rem; vertical-align: middle; }
+  .td-rank {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; color: var(--blinkit-muted); font-size: 1rem;
+  }
+  .td-rank.top { color: var(--blinkit-yellow); }
+  .zone-name { font-weight: 500; }
+  .zone-city { font-size: 0.78rem; color: var(--blinkit-muted); }
+
+  .score-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 100px; font-size: 0.8rem; font-weight: 600;
+  }
+  .pill-high { background: rgba(57,211,83,0.12); color: var(--score-high); }
+  .pill-mid { background: rgba(249,208,0,0.12); color: var(--blinkit-yellow); }
+  .pill-low { background: rgba(248,81,73,0.12); color: var(--score-low); }
+
+  .bar-mini { width: 80px; height: 6px; background: var(--blinkit-border); border-radius: 3px; overflow: hidden; }
+  .bar-mini-fill { height: 100%; border-radius: 3px; }
+
+  /* === HOW IT WORKS === */
+  .how-section { margin-bottom: 64px; }
+  .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 32px; }
+  .step-card {
+    background: var(--blinkit-card);
+    border: 1px solid var(--blinkit-border);
+    border-radius: 18px; padding: 24px;
+    position: relative;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .step-card:hover { border-color: rgba(249,208,0,0.3); transform: translateY(-4px); }
+
+  .step-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.5rem; font-weight: 800;
+    color: rgba(249,208,0,0.15); line-height: 1;
+    margin-bottom: 12px;
+  }
+  .step-icon { font-size: 1.5rem; margin-bottom: 12px; }
+  .step-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; }
+  .step-desc { font-size: 0.82rem; color: var(--blinkit-muted); line-height: 1.6; }
+
+  .step-connector {
+    position: absolute; top: 50%; right: -11px;
+    width: 22px; height: 2px; background: var(--blinkit-border); z-index: 2;
+  }
+  .step-card:last-child .step-connector { display: none; }
+
+  /* === FOOTER === */
+  footer {
+    border-top: 1px solid var(--blinkit-border);
+    padding: 40px 32px;
+    position: relative; z-index: 1;
+    display: flex; justify-content: space-between; align-items: center;
+    max-width: 1200px; margin: 0 auto;
+  }
+  .footer-left { display: flex; align-items: center; gap: 12px; }
+  .footer-text { font-size: 0.82rem; color: var(--blinkit-muted); }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a { font-size: 0.82rem; color: var(--blinkit-muted); text-decoration: none; }
+  .footer-links a:hover { color: var(--blinkit-yellow); }
+
+  /* === LOADING === */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(13,17,23,0.8); backdrop-filter: blur(10px);
+    z-index: 200; align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+  }
+  .loading-overlay.active { display: flex; }
+  .loader {
+    width: 60px; height: 60px;
+    border: 3px solid var(--blinkit-border);
+    border-top-color: var(--blinkit-yellow);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  .loading-text { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 600; }
+  .loading-sub { font-size: 0.85rem; color: var(--blinkit-muted); }
+
+  /* === ANIMATIONS === */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes zoneAppear {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pinDrop {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; gap: 40px; }
+    .form-grid { grid-template-columns: repeat(2, 1fr); }
+    .weights-grid { grid-template-columns: repeat(2, 1fr); }
+    .result-grid { grid-template-columns: 1fr; }
+    .steps-grid { grid-template-columns: repeat(2, 1fr); }
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    nav { display: none; }
+  }
+  @media (max-width: 600px) {
+    .hero { padding: 40px 20px 40px; }
+    main { padding: 0 20px 60px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .weights-grid { grid-template-columns: repeat(2, 1fr); }
+    .steps-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader"></div>
+  <div class="loading-text">Analyzing Location Data</div>
+  <div class="loading-sub" id="loadingStep">Processing demographic signals...</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <a class="logo" href="#">
+    <div class="logo-icon">⚡</div>
+    Blink<span>Predict</span>
+  </a>
+  <nav>
+    <a href="#predict" class="active">Predict</a>
+    <a href="#zones">Top Zones</a>
+    <a href="#how">How It Works</a>
+  </nav>
+  <button class="header-cta" onclick="document.getElementById('predict').scrollIntoView({behavior:'smooth'})">Start Analysis →</button>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">AI-Powered Store Intelligence</div>
+    <h1>Find the <span class="highlight">Perfect</span><br>Blinkit Location</h1>
+    <p class="hero-sub">Data-driven dark store placement using population density, profession mix, income levels, competitor analysis, and foot traffic scoring.</p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="document.getElementById('predict').scrollIntoView({behavior:'smooth'})">
+        ⚡ Predict Now
+      </button>
+      <button class="btn-secondary" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How It Works</button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-value">97%</div><div class="stat-label">Accuracy Rate</div></div>
+      <div class="stat"><div class="stat-value">12+</div><div class="stat-label">Key Factors</div></div>
+      <div class="stat"><div class="stat-value">10min</div><div class="stat-label">Delivery Coverage</div></div>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="map-preview">
+      <div class="map-header">
+        <div class="map-title">📍 Live Zone Map</div>
+        <div class="map-live">ANALYZING</div>
+      </div>
+      <div class="map-svg-area">
+        <div class="map-grid-lines"></div>
+        <div class="zone zone-a"></div>
+        <div class="zone zone-b"></div>
+        <div class="zone zone-c"></div>
+        <div class="zone zone-d"></div>
+        <div class="zone zone-e"></div>
+        <div class="map-pin pin-best" style="animation-name: pinDrop;">
+          <div class="map-pin-icon"><span>✓</span></div>
+        </div>
+        <div class="map-pin pin-good" style="animation-name: pinDrop;">
+          <div class="map-pin-icon"><span>+</span></div>
+        </div>
+      </div>
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--score-high)"></div> Excellent</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--score-mid)"></div> Good</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--score-low)"></div> Poor</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN -->
+<main>
+
+  <!-- PREDICTION FORM -->
+  <section id="predict" class="prediction-section">
+    <div class="section-header">
+      <div class="section-tag">Step 1 — Input Parameters</div>
+      <div class="section-title">Location Analysis</div>
+      <div class="section-sub">Enter area details to calculate the store placement viability score</div>
+    </div>
+
+    <!-- LOCATION BREADCRUMB STRIP -->
+    <div id="locationBreadcrumb" style="display:none; margin-bottom:20px; padding:12px 16px; background:#0D1117; border:1px solid #21262D; border-radius:10px; font-size:0.83rem; color:#7D8590; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+      <span id="bcState" style="color:#E6EDF3;font-weight:600;"></span>
+      <span id="bcArrow1" style="display:none">›</span>
+      <span id="bcCity" style="color:#E6EDF3;font-weight:600;"></span>
+      <span id="bcArrow2" style="display:none">›</span>
+      <span id="bcArea" style="color:#F9D000;font-weight:600;"></span>
+    </div>
+
+    <div class="form-grid">
+
+      <!-- STEP A: STATE -->
+      <div class="form-group">
+        <label>State / UT <span class="required">*</span></label>
+        <div class="input-wrapper">
+          <select id="stateSelect" onchange="onStateChange(this.value)">
+            <option value="">— Select State / UT —</option>
+            <option value="AN">Andaman & Nicobar Islands</option>
+            <option value="AP">Andhra Pradesh</option>
+            <option value="AR">Arunachal Pradesh</option>
+            <option value="AS">Assam</option>
+            <option value="BR">Bihar</option>
+            <option value="CH">Chandigarh</option>
+            <option value="CG">Chhattisgarh</option>
+            <option value="DH">Dadra & Nagar Haveli and Daman & Diu</option>
+            <option value="DL">Delhi (NCT)</option>
+            <option value="GA">Goa</option>
+            <option value="GJ">Gujarat</option>
+            <option value="HR">Haryana</option>
+            <option value="HP">Himachal Pradesh</option>
+            <option value="JK">Jammu & Kashmir</option>
+            <option value="JH">Jharkhand</option>
+            <option value="KA">Karnataka</option>
+            <option value="KL">Kerala</option>
+            <option value="LA">Ladakh</option>
+            <option value="LD">Lakshadweep</option>
+            <option value="MP">Madhya Pradesh</option>
+            <option value="MH">Maharashtra</option>
+            <option value="MN">Manipur</option>
+            <option value="ML">Meghalaya</option>
+            <option value="MZ">Mizoram</option>
+            <option value="NL">Nagaland</option>
+            <option value="OD">Odisha</option>
+            <option value="PY">Puducherry</option>
+            <option value="PB">Punjab</option>
+            <option value="RJ">Rajasthan</option>
+            <option value="SK">Sikkim</option>
+            <option value="TN">Tamil Nadu</option>
+            <option value="TG">Telangana</option>
+            <option value="TR">Tripura</option>
+            <option value="UP">Uttar Pradesh</option>
+            <option value="UK">Uttarakhand</option>
+            <option value="WB">West Bengal</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- STEP B: CITY / DISTRICT -->
+      <div class="form-group" id="cityGroup" style="opacity:0.4;pointer-events:none;">
+        <label>City / District <span class="required">*</span></label>
+        <div class="input-wrapper" style="position:relative">
+          <input type="text" id="cityInput" placeholder="Select state first…" autocomplete="off" readonly
+            oninput="onCityType(this.value)"
+            onblur="setTimeout(()=>document.getElementById('citySuggest').style.display='none',200)" />
+          <span class="input-icon" style="cursor:pointer" onclick="openCityDropdown()">▾</span>
+          <div id="citySuggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;
+            background:#161B22;border:1px solid #21262D;border-top:none;border-radius:0 0 12px 12px;
+            max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);"></div>
+        </div>
+      </div>
+
+      <!-- STEP C: LOCALITY / AREA -->
+      <div class="form-group" id="areaGroup" style="opacity:0.4;pointer-events:none;">
+        <label>Locality / Area / Colony <span class="required">*</span></label>
+        <div class="input-wrapper" style="position:relative">
+          <input type="text" id="areaInput" placeholder="Select city first…" autocomplete="off" readonly
+            oninput="onAreaType(this.value)"
+            onblur="setTimeout(()=>document.getElementById('areaSuggest').style.display='none',200)" />
+          <span class="input-icon" style="cursor:pointer" onclick="openAreaDropdown()">▾</span>
+          <div id="areaSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;
+            background:#161B22;border:1px solid #21262D;border-top:none;border-radius:0 0 12px 12px;
+            max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.6);"></div>
+        </div>
+      </div>
+
+      <!-- STEP D: AREA TYPE (unlocks after area chosen) -->
+      <div class="form-group" id="areaTypeGroup" style="opacity:0.4;pointer-events:none;">
+        <label>Area Type</label>
+        <select id="areaType">
+          <option value="residential">Residential Colony</option>
+          <option value="commercial">Commercial Hub</option>
+          <option value="mixed">Mixed Use</option>
+          <option value="tech-park">Tech Park / IT Zone</option>
+          <option value="market">Local Market / Bazaar</option>
+          <option value="highway">Highway / Bypass Area</option>
+          <option value="industrial">Industrial Zone</option>
+          <option value="village">Village / Rural Area</option>
+        </select>
+      </div>
+
+      <!-- Blinkit presence notice -->
+      <div class="form-group full-width" id="blinkitNotice" style="display:none;">
+        <div id="blinkitNoticeBox" style="padding:12px 16px; border-radius:10px; font-size:0.85rem; line-height:1.5;"></div>
+      </div>
+
+      <!-- Sliders -->
+      <div class="form-group slider-group">
+        <div class="slider-header">
+          <label>Population Density</label>
+          <span class="slider-value" id="popVal">8,000/km²</span>
+        </div>
+        <input type="range" id="population" min="1000" max="50000" value="8000" step="500"
+          oninput="document.getElementById('popVal').textContent = Number(this.value).toLocaleString() + '/km²'">
+      </div>
+
+      <div class="form-group slider-group">
+        <div class="slider-header">
+          <label>Avg. Monthly Income</label>
+          <span class="slider-value" id="incomeVal">₹45,000</span>
+        </div>
+        <input type="range" id="income" min="15000" max="200000" value="45000" step="5000"
+          oninput="document.getElementById('incomeVal').textContent = '₹' + Number(this.value).toLocaleString()">
+      </div>
+
+      <div class="form-group slider-group">
+        <div class="slider-header">
+          <label>Daily Foot Traffic</label>
+          <span class="slider-value" id="trafficVal">500/day</span>
+        </div>
+        <input type="range" id="traffic" min="50" max="5000" value="500" step="50"
+          oninput="document.getElementById('trafficVal').textContent = Number(this.value).toLocaleString() + '/day'">
+      </div>
+
+      <div class="form-group">
+        <label>Competitor Count (within 2km)</label>
+        <input type="number" id="competitors" placeholder="0" min="0" max="20" value="2" />
+      </div>
+
+      <div class="form-group">
+        <label>Existing Blinkit Stores Nearby</label>
+        <input type="number" id="blinkitNearby" placeholder="0" min="0" max="10" value="0" />
+      </div>
+
+      <div class="form-group">
+        <label>Delivery Radius (km)</label>
+        <input type="number" id="deliveryRadius" placeholder="2.5" min="1" max="5" step="0.5" value="2.5" />
+      </div>
+
+      <!-- Profession Mix -->
+      <div class="form-group full-width">
+        <label>Dominant Profession Mix in Area</label>
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 4px;">
+          <label style="flex-direction: column; gap: 4px; cursor: pointer; background: #0D1117; border: 1px solid var(--blinkit-border); border-radius: 10px; padding: 10px; text-align: center; transition: all 0.2s; font-size: 0.8rem; color: var(--blinkit-muted);" class="prof-label" id="prof_it">
+            <input type="checkbox" value="it" onchange="toggleProf(this)" style="display:none">
+            💻<br>IT/Tech
+          </label>
+          <label style="flex-direction: column; gap: 4px; cursor: pointer; background: #0D1117; border: 1px solid var(--blinkit-border); border-radius: 10px; padding: 10px; text-align: center; transition: all 0.2s; font-size: 0.8rem; color: var(--blinkit-muted);" class="prof-label" id="prof_student">
+            <input type="checkbox" value="student" onchange="toggleProf(this)" style="display:none">
+            🎓<br>Students
+          </label>
+          <label style="flex-direction: column; gap: 4px; cursor: pointer; background: #0D1117; border: 1px solid var(--blinkit-border); border-radius: 10px; padding: 10px; text-align: center; transition: all 0.2s; font-size: 0.8rem; color: var(--blinkit-muted);" class="prof-label" id="prof_business">
+            <input type="checkbox" value="business" onchange="toggleProf(this)" style="display:none">
+            🏪<br>Business
+          </label>
+          <label style="flex-direction: column; gap: 4px; cursor: pointer; background: #0D1117; border: 1px solid var(--blinkit-border); border-radius: 10px; padding: 10px; text-align: center; transition: all 0.2s; font-size: 0.8rem; color: var(--blinkit-muted);" class="prof-label" id="prof_service">
+            <input type="checkbox" value="service" onchange="toggleProf(this)" style="display:none">
+            👔<br>Service
+          </label>
+          <label style="flex-direction: column; gap: 4px; cursor: pointer; background: #0D1117; border: 1px solid var(--blinkit-border); border-radius: 10px; padding: 10px; text-align: center; transition: all 0.2s; font-size: 0.8rem; color: var(--blinkit-muted);" class="prof-label" id="prof_medical">
+            <input type="checkbox" value="medical" onchange="toggleProf(this)" style="display:none">
+            🏥<br>Medical
+          </label>
+          <label style="flex-direction: column; gap: 4px; cursor: pointer; background: #0D1117; border: 1px solid var(--blinkit-border); border-radius: 10px; padding: 10px; text-align: center; transition: all 0.2s; font-size: 0.8rem; color: var(--blinkit-muted);" class="prof-label" id="prof_mixed">
+            <input type="checkbox" value="mixed" onchange="toggleProf(this)" style="display:none">
+            🏘️<br>Mixed
+          </label>
+        </div>
+      </div>
+
+      <!-- Additional factors -->
+      <div class="form-group">
+        <label>Metro / Transit Access</label>
+        <select id="transit">
+          <option value="3">Metro station within 500m</option>
+          <option value="2" selected>Bus stop within 500m</option>
+          <option value="1">Limited transit</option>
+          <option value="0">No transit nearby</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Parking Availability</label>
+        <select id="parking">
+          <option value="2">Ample parking</option>
+          <option value="1" selected>Limited parking</option>
+          <option value="0">No parking</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Area Growth Trend</label>
+        <select id="growth">
+          <option value="3">Rapidly growing</option>
+          <option value="2" selected>Moderate growth</option>
+          <option value="1">Stable</option>
+          <option value="0">Declining</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Weights -->
+    <div class="weights-section">
+      <div class="weights-title">⚖️ Scoring Weights — Customize how each factor is weighted in the final score</div>
+      <div class="weights-grid">
+        <div class="weight-item form-group slider-group">
+          <div class="slider-header">
+            <label>Population</label>
+            <span class="slider-value" id="wPopVal">30%</span>
+          </div>
+          <input type="range" id="wPop" min="0" max="50" value="30"
+            oninput="document.getElementById('wPopVal').textContent = this.value + '%'">
+        </div>
+        <div class="weight-item form-group slider-group">
+          <div class="slider-header">
+            <label>Income Level</label>
+            <span class="slider-value" id="wIncVal">25%</span>
+          </div>
+          <input type="range" id="wInc" min="0" max="50" value="25"
+            oninput="document.getElementById('wIncVal').textContent = this.value + '%'">
+        </div>
+        <div class="weight-item form-group slider-group">
+          <div class="slider-header">
+            <label>Foot Traffic</label>
+            <span class="slider-value" id="wTrafVal">25%</span>
+          </div>
+          <input type="range" id="wTraf" min="0" max="50" value="25"
+            oninput="document.getElementById('wTrafVal').textContent = this.value + '%'">
+        </div>
+        <div class="weight-item form-group slider-group">
+          <div class="slider-header">
+            <label>Competition</label>
+            <span class="slider-value" id="wCompVal">20%</span>
+          </div>
+          <input type="range" id="wComp" min="0" max="50" value="20"
+            oninput="document.getElementById('wCompVal').textContent = this.value + '%'">
+        </div>
+      </div>
+    </div>
+
+    <button class="predict-btn" onclick="runPrediction()">
+      ⚡ Calculate Store Placement Score
+    </button>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="results">
+    <div class="section-header">
+      <div class="section-tag">Step 2 — Analysis Result</div>
+      <div class="section-title" id="resultTitle">Zone Score Report</div>
+    </div>
+
+    <div class="result-grid">
+      <!-- Main Score Card -->
+      <div class="score-card highlight">
+        <div class="score-header">
+          <div>
+            <div class="score-location" id="resultAreaName">—</div>
+            <div class="score-coords" id="resultCity">—</div>
+          </div>
+          <div class="score-badge" id="resultBadge">—</div>
+        </div>
+
+        <div class="score-circle-container">
+          <div class="score-circle">
+            <svg viewBox="0 0 100 100" width="120" height="120">
+              <circle class="score-circle-bg" cx="50" cy="50" r="45"/>
+              <circle class="score-circle-progress" id="scoreCircle" cx="50" cy="50" r="45" stroke="#F9D000" stroke-dashoffset="283"/>
+            </svg>
+            <div class="score-circle-text">
+              <div class="score-number" id="scoreNumber">0</div>
+              <div class="score-label">/ 100</div>
+            </div>
+          </div>
+
+          <div class="score-breakdown">
+            <div class="breakdown-item">
+              <div class="breakdown-header">
+                <span>Population Score</span>
+                <span id="bPop">—</span>
+              </div>
+              <div class="breakdown-bar"><div class="breakdown-fill" id="bPopBar" style="width:0%;background:var(--score-high)"></div></div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-header">
+                <span>Income Score</span>
+                <span id="bInc">—</span>
+              </div>
+              <div class="breakdown-bar"><div class="breakdown-fill" id="bIncBar" style="width:0%;background:#4D9EFF"></div></div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-header">
+                <span>Traffic Score</span>
+                <span id="bTraf">—</span>
+              </div>
+              <div class="breakdown-bar"><div class="breakdown-fill" id="bTrafBar" style="width:0%;background:#A78BFA"></div></div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-header">
+                <span>Competition Score</span>
+                <span id="bComp">—</span>
+              </div>
+              <div class="breakdown-bar"><div class="breakdown-fill" id="bCompBar" style="width:0%;background:var(--blinkit-yellow)"></div></div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-header">
+                <span>Location Bonus</span>
+                <span id="bBonus">—</span>
+              </div>
+              <div class="breakdown-bar"><div class="breakdown-fill" id="bBonusBar" style="width:0%;background:#FB923C"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-mini">
+            <div class="metric-mini-value" id="mPop">—</div>
+            <div class="metric-mini-label">Population Density</div>
+          </div>
+          <div class="metric-mini">
+            <div class="metric-mini-value" id="mIncome">—</div>
+            <div class="metric-mini-label">Avg Monthly Income</div>
+          </div>
+          <div class="metric-mini">
+            <div class="metric-mini-value" id="mTraffic">—</div>
+            <div class="metric-mini-label">Daily Traffic</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Side Panel -->
+      <div class="side-panel">
+        <div class="verdict-card">
+          <div class="verdict-title">🧠 AI Verdict</div>
+          <span class="verdict-icon" id="verdictIcon">—</span>
+          <p class="verdict-text" id="verdictText">Run the analysis to get an AI-powered placement verdict.</p>
+        </div>
+
+        <div class="verdict-card">
+          <div class="verdict-title">📋 Action Plan</div>
+          <ul class="action-items" id="actionList">
+            <li><span class="action-icon">⏳</span> Awaiting analysis...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAP SECTION -->
+  <section id="mapSection" class="map-full-section" style="display:none">
+    <div class="section-header">
+      <div class="section-tag">Geospatial View</div>
+      <div class="section-title">Coverage Map</div>
+      <div class="section-sub">Visualizing delivery radius and zone classification</div>
+    </div>
+    <div class="map-full">
+      <canvas id="mapCanvas"></canvas>
+    </div>
+  </section>
+
+  <!-- TOP ZONES TABLE -->
+  <section id="zones" class="zones-section">
+    <div class="section-header">
+      <div class="section-tag">Reference Data</div>
+      <div class="section-title">Top Predicted Zones</div>
+      <div class="section-sub">Sample dataset of pre-analyzed locations across Indian cities</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Zone</th>
+          <th>Score</th>
+          <th>Population</th>
+          <th>Income</th>
+          <th>Cluster</th>
+          <th>Viability</th>
+        </tr>
+      </thead>
+      <tbody id="zonesTable"></tbody>
+    </table>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" class="how-section">
+    <div class="section-header">
+      <div class="section-tag">Methodology</div>
+      <div class="section-title">How BlinkPredict Works</div>
+      <div class="section-sub">A 4-step ML-backed pipeline for store placement intelligence</div>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-connector"></div>
+        <div class="step-num">01</div>
+        <div class="step-icon">📊</div>
+        <div class="step-title">Data Collection</div>
+        <div class="step-desc">Gather population density, demographic data, income levels, professional distribution, and geospatial coordinates for each candidate zone.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-connector"></div>
+        <div class="step-num">02</div>
+        <div class="step-icon">⚙️</div>
+        <div class="step-title">Feature Scoring</div>
+        <div class="step-desc">Each zone gets scored on 12+ weighted metrics: population, income, foot traffic, competitors, transit access, parking, and growth trajectory.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-connector"></div>
+        <div class="step-num">03</div>
+        <div class="step-icon">🤖</div>
+        <div class="step-title">KMeans Clustering</div>
+        <div class="step-desc">Scikit-learn KMeans segments zones into clusters — High Potential, Moderate, and Low Viability — based on combined feature vectors.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div class="step-icon">🗺️</div>
+        <div class="step-title">Map Visualization</div>
+        <div class="step-desc">Results render as an interactive Folium map with color-coded zones, delivery radius circles, and ranked placement recommendations.</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    <div class="logo-icon">⚡</div>
+    <span class="footer-text">BlinkPredict — Built on <a href="https://github.com/Ronit049/BLINKIT-store-placement-prediction-project-" style="color:var(--blinkit-yellow);text-decoration:none;">Ronit049's Project</a></span>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/Ronit049/BLINKIT-store-placement-prediction-project-">GitHub</a>
+    <a href="https://www.linkedin.com/in/ronit-raj-114181315">LinkedIn</a>
+  </div>
+</footer>
+
+<script>
+// ========================
+// DATA
+// ========================
+const sampleZones = [
+  { rank:1, name:"Koramangala", city:"Bangalore", score:91, pop:22000, income:85000, cluster:"High Potential", type:"IT Zone" },
+  { rank:2, name:"Bandra West", city:"Mumbai", score:88, pop:18000, income:95000, cluster:"High Potential", type:"Mixed" },
+  { rank:3, name:"Vaishali Nagar", city:"Jaipur", score:84, pop:15000, income:55000, cluster:"High Potential", type:"Residential" },
+  { rank:4, name:"Indiranagar", city:"Bangalore", score:82, pop:19000, income:78000, cluster:"High Potential", type:"Commercial" },
+  { rank:5, name:"Hauz Khas", city:"Delhi", score:79, pop:14000, income:72000, cluster:"Moderate", type:"Mixed" },
+  { rank:6, name:"Aundh", city:"Pune", score:76, pop:12000, income:60000, cluster:"Moderate", type:"Residential" },
+  { rank:7, name:"Adyar", city:"Chennai", score:74, pop:16000, income:52000, cluster:"Moderate", type:"Residential" },
+  { rank:8, name:"Salt Lake", city:"Kolkata", score:71, pop:13500, income:48000, cluster:"Moderate", type:"Tech Park" },
+  { rank:9, name:"Navrangpura", city:"Ahmedabad", score:68, pop:11000, income:45000, cluster:"Low", type:"Commercial" },
+  { rank:10, name:"Pal", city:"Surat", score:61, pop:9000, income:38000, cluster:"Low", type:"Mixed" },
+];
+
+// Populate table
+function populateTable() {
+  const tbody = document.getElementById('zonesTable');
+  sampleZones.forEach(z => {
+    const scoreClass = z.score >= 80 ? 'pill-high' : z.score >= 65 ? 'pill-mid' : 'pill-low';
+    const barColor = z.score >= 80 ? 'var(--score-high)' : z.score >= 65 ? 'var(--score-mid)' : 'var(--score-low)';
+    const rankClass = z.rank <= 3 ? 'top' : '';
+    tbody.innerHTML += `
+      <tr>
+        <td class="td-rank ${rankClass}">${z.rank <= 3 ? '🏆' : z.rank}</td>
+        <td><div class="zone-name">${z.name}</div><div class="zone-city">${z.city} · ${z.type}</div></td>
+        <td><span class="score-pill ${scoreClass}">${z.score}/100</span></td>
+        <td>${z.pop.toLocaleString()}/km²</td>
+        <td>₹${z.income.toLocaleString()}</td>
+        <td><span style="font-size:0.8rem;color:var(--blinkit-muted)">${z.cluster}</span></td>
+        <td><div class="bar-mini"><div class="bar-mini-fill" style="width:${z.score}%;background:${barColor}"></div></div></td>
+      </tr>`;
+  });
+}
+
+// ========================
+// PROFESSION TOGGLE
+// ========================
+const selectedProfs = new Set();
+function toggleProf(cb) {
+  const label = cb.parentElement;
+  if (cb.checked) {
+    selectedProfs.add(cb.value);
+    label.style.borderColor = 'var(--blinkit-yellow)';
+    label.style.background = 'rgba(249,208,0,0.08)';
+    label.style.color = 'var(--blinkit-yellow)';
+  } else {
+    selectedProfs.delete(cb.value);
+    label.style.borderColor = 'var(--blinkit-border)';
+    label.style.background = '#0D1117';
+    label.style.color = 'var(--blinkit-muted)';
+  }
+}
+
+// ========================
+// SCORING ENGINE
+// ========================
+function calculateScore(params) {
+  const { population, income, traffic, competitors, blinkitNearby, transit, parking, growth,
+          wPop, wInc, wTraf, wComp, professions, areaType, deliveryRadius } = params;
+
+  // Normalize each factor 0-100
+  const popScore = Math.min(100, (population / 30000) * 100);
+  const incScore = Math.min(100, ((income - 15000) / 185000) * 100);
+  const trafScore = Math.min(100, (traffic / 3000) * 100);
+  const compScore = Math.max(0, 100 - (competitors * 12) - (blinkitNearby * 18));
+
+  // Weighted main score
+  const total = wPop + wInc + wTraf + wComp || 100;
+  let score = (
+    (popScore * wPop / total) +
+    (incScore * wInc / total) +
+    (trafScore * wTraf / total) +
+    (compScore * wComp / total)
+  );
+
+  // Location bonus
+  let bonus = 0;
+  bonus += parseInt(transit) * 3;
+  bonus += parseInt(parking) * 2;
+  bonus += parseInt(growth) * 4;
+
+  // Profession bonus
+  if (professions.has('it') || professions.has('medical')) bonus += 8;
+  if (professions.has('student')) bonus += 5;
+  if (professions.has('business')) bonus += 4;
+
+  // Area type bonus
+  if (areaType === 'residential') bonus += 6;
+  if (areaType === 'tech-park') bonus += 8;
+  if (areaType === 'mixed') bonus += 4;
+
+  // Delivery radius factor
+  bonus += deliveryRadius >= 2.5 ? 3 : 0;
+
+  score = Math.min(100, Math.max(0, score + bonus));
+
+  return {
+    total: Math.round(score),
+    popScore: Math.round(popScore),
+    incScore: Math.round(incScore),
+    trafScore: Math.round(trafScore),
+    compScore: Math.round(compScore),
+    bonusScore: Math.min(100, Math.round(bonus)),
+  };
+}
+
+// ========================
+// PREDICTION RUNNER
+// ========================
+function runPrediction() {
+  const areaName = document.getElementById('areaName').value || 'Unnamed Zone';
+  const city = document.getElementById('city').value || 'Unknown City';
+
+  const params = {
+    population: +document.getElementById('population').value,
+    income: +document.getElementById('income').value,
+    traffic: +document.getElementById('traffic').value,
+    competitors: +document.getElementById('competitors').value || 0,
+    blinkitNearby: +document.getElementById('blinkitNearby').value || 0,
+    transit: document.getElementById('transit').value,
+    parking: document.getElementById('parking').value,
+    growth: document.getElementById('growth').value,
+    wPop: +document.getElementById('wPop').value,
+    wInc: +document.getElementById('wInc').value,
+    wTraf: +document.getElementById('wTraf').value,
+    wComp: +document.getElementById('wComp').value,
+    professions: selectedProfs,
+    areaType: document.getElementById('areaType').value,
+    deliveryRadius: +document.getElementById('deliveryRadius').value,
+  };
+
+  // Loading states
+  const steps = [
+    'Processing demographic signals...',
+    'Analyzing competitor landscape...',
+    'Running KMeans clustering...',
+    'Calculating viability score...',
+    'Generating placement verdict...',
+  ];
+  let stepIdx = 0;
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.add('active');
+
+  const stepTimer = setInterval(() => {
+    stepIdx++;
+    if (stepIdx < steps.length) {
+      document.getElementById('loadingStep').textContent = steps[stepIdx];
+    }
+  }, 380);
+
+  setTimeout(() => {
+    clearInterval(stepTimer);
+    overlay.classList.remove('active');
+
+    const scores = calculateScore(params);
+    showResults(areaName, city, params, scores);
+  }, 2100);
+}
+
+function showResults(areaName, city, params, scores) {
+  const { total, popScore, incScore, trafScore, compScore, bonusScore } = scores;
+
+  // Update header
+  document.getElementById('resultTitle').textContent = `Score Report: ${areaName}`;
+  document.getElementById('resultAreaName').textContent = `📍 ${areaName}`;
+  document.getElementById('resultCity').textContent = `${city} · ${document.getElementById('areaType').options[document.getElementById('areaType').selectedIndex].text}`;
+
+  // Badge
+  let badgeClass, badgeText;
+  if (total >= 75) { badgeClass = 'badge-excellent'; badgeText = '✅ Excellent Location'; }
+  else if (total >= 55) { badgeClass = 'badge-good'; badgeText = '⚡ Good Potential'; }
+  else { badgeClass = 'badge-poor'; badgeText = '⚠️ Poor Viability'; }
+
+  const badge = document.getElementById('resultBadge');
+  badge.className = 'score-badge ' + badgeClass;
+  badge.textContent = badgeText;
+
+  // Animate circle
+  const circle = document.getElementById('scoreCircle');
+  const circumference = 283;
+  const offset = circumference - (total / 100) * circumference;
+  const circleColor = total >= 75 ? '#39D353' : total >= 55 ? '#F9D000' : '#F85149';
+  circle.style.stroke = circleColor;
+
+  let count = 0;
+  const numEl = document.getElementById('scoreNumber');
+  numEl.style.color = circleColor;
+  const counter = setInterval(() => {
+    count += 2;
+    if (count >= total) { count = total; clearInterval(counter); }
+    numEl.textContent = count;
+    circle.style.strokeDashoffset = circumference - (count / 100) * circumference;
+  }, 20);
+
+  // Breakdowns
+  const bars = [
+    { id: 'bPop', bar: 'bPopBar', val: popScore },
+    { id: 'bInc', bar: 'bIncBar', val: incScore },
+    { id: 'bTraf', bar: 'bTrafBar', val: trafScore },
+    { id: 'bComp', bar: 'bCompBar', val: compScore },
+    { id: 'bBonus', bar: 'bBonusBar', val: bonusScore },
+  ];
+  bars.forEach(b => {
+    document.getElementById(b.id).textContent = b.val + '/100';
+    setTimeout(() => {
+      document.getElementById(b.bar).style.width = b.val + '%';
+    }, 300);
+  });
+
+  // Metrics
+  document.getElementById('mPop').textContent = Number(params.population).toLocaleString() + '/km²';
+  document.getElementById('mIncome').textContent = '₹' + Number(params.income).toLocaleString();
+  document.getElementById('mTraffic').textContent = Number(params.traffic).toLocaleString() + '/day';
+
+  // Verdict
+  let icon, verdict;
+  if (total >= 80) {
+    icon = '🚀'; verdict = `${areaName} is a prime candidate for a Blinkit dark store. High population density combined with strong income levels and foot traffic creates excellent 10-minute delivery economics. Immediate action recommended.`;
+  } else if (total >= 65) {
+    icon = '✅'; verdict = `${areaName} shows solid placement potential. The area has good demographic fundamentals. Some optimization on competition strategy and marketing spend will be needed to achieve strong unit economics.`;
+  } else if (total >= 50) {
+    icon = '⚡'; verdict = `${areaName} has moderate viability. Market conditions are mixed — revisit in 6–12 months as the area develops, or consider targeting an adjacent sub-zone with stronger metrics.`;
+  } else {
+    icon = '⚠️'; verdict = `${areaName} is not recommended for placement at this time. Low population density or high competition significantly reduces delivery order economics. Explore neighboring zones.`;
+  }
+
+  document.getElementById('verdictIcon').textContent = icon;
+  document.getElementById('verdictText').textContent = verdict;
+
+  // Action items
+  const actions = [];
+  if (popScore < 60) actions.push({ icon: '👥', text: 'Target higher-density micro-zones within the area for warehouse placement' });
+  if (incScore < 60) actions.push({ icon: '💰', text: 'Focus marketing on value SKUs and combo offers to drive order frequency' });
+  if (trafScore < 60) actions.push({ icon: '🚶', text: 'Partner with nearby offices/colleges to drive delivery demand' });
+  if (compScore < 60) actions.push({ icon: '⚔️', text: 'Launch aggressive first-order discounts to capture market share from competitors' });
+  if (params.blinkitNearby > 0) actions.push({ icon: '🗺️', text: 'Differentiate from nearby Blinkit stores with unique inventory or faster delivery windows' });
+  if (total >= 75) actions.push({ icon: '🏪', text: 'Proceed with site scouting — prioritize ground floor access with loading bay' });
+  actions.push({ icon: '📊', text: 'Set up monthly demand tracking to validate prediction accuracy post-launch' });
+
+  const actionList = document.getElementById('actionList');
+  actionList.innerHTML = actions.slice(0, 5).map(a =>
+    `<li><span class="action-icon">${a.icon}</span> ${a.text}</li>`).join('');
+
+  // Show results
+  document.getElementById('results').classList.add('visible');
+  document.getElementById('mapSection').style.display = 'block';
+  drawMap(total, areaName);
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ========================
+// CANVAS MAP
+// ========================
+function drawMap(score, areaName) {
+  const canvas = document.getElementById('mapCanvas');
+  const container = canvas.parentElement;
+  canvas.width = container.offsetWidth;
+  canvas.height = container.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = '#040d18';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  // Roads (simple lines)
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 3;
+  [[W*0.1, 0, W*0.9, H*0.6], [0, H*0.4, W, H*0.55], [W*0.5, 0, W*0.4, H], [W*0.25, 0, W*0.3, H]].forEach(([x1,y1,x2,y2]) => {
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  });
+
+  // Zones
+  const zones = [
+    { x: W*0.2, y: H*0.3, r: 70, score: score, label: areaName },
+    { x: W*0.55, y: H*0.5, r: 50, score: score * 0.8, label: 'Adjacent Zone' },
+    { x: W*0.75, y: H*0.25, r: 40, score: score * 0.6, label: 'Zone C' },
+    { x: W*0.35, y: H*0.7, r: 35, score: score * 0.5, label: 'Zone D' },
+  ];
+
+  zones.forEach(z => {
+    const color = z.score >= 75 ? [57, 211, 83] : z.score >= 55 ? [249, 208, 0] : [248, 81, 73];
+    const grad = ctx.createRadialGradient(z.x, z.y, 0, z.x, z.y, z.r);
+    grad.addColorStop(0, `rgba(${color.join(',')}, 0.5)`);
+    grad.addColorStop(1, `rgba(${color.join(',')}, 0)`);
+    ctx.beginPath();
+    ctx.arc(z.x, z.y, z.r, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  });
+
+  // Delivery radius circle for main zone
+  const mainZone = zones[0];
+  ctx.beginPath();
+  ctx.arc(mainZone.x, mainZone.y, 120, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(249,208,0,0.3)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 6]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Labels
+  zones.forEach(z => {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = `bold 11px 'DM Sans', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(z.label, z.x, z.y - z.r - 8);
+    const scoreColor = z.score >= 75 ? '#39D353' : z.score >= 55 ? '#F9D000' : '#F85149';
+    ctx.fillStyle = scoreColor;
+    ctx.fillText(Math.round(z.score) + '/100', z.x, z.y + 6);
+  });
+
+  // Main pin
+  ctx.beginPath();
+  ctx.arc(mainZone.x, mainZone.y, 10, 0, Math.PI*2);
+  ctx.fillStyle = '#F9D000';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(mainZone.x, mainZone.y, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#000';
+  ctx.fill();
+
+  // Legend
+  const legendItems = [['Excellent (75+)', [57,211,83]], ['Good (55–74)', [249,208,0]], ['Poor (<55)', [248,81,73]]];
+  legendItems.forEach(([label, color], i) => {
+    ctx.fillStyle = `rgb(${color.join(',')})`;
+    ctx.fillRect(20, H - 60 + i*18, 10, 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '11px DM Sans, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, 36, H - 52 + i*18);
+  });
+
+  // Delivery radius label
+  ctx.fillStyle = 'rgba(249,208,0,0.6)';
+  ctx.font = '10px DM Sans, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('10-min delivery radius', mainZone.x, mainZone.y - 128);
+}
+
+// ============================================================
+// INDIA LOCATION DATABASE  — State → Cities → Areas
+// Works for ANY area in India whether Blinkit is there or not
+// ============================================================
+
+// Cities keyed by state code
+const STATE_CITIES = {
+  AN: ["Port Blair","Diglipur","Rangat","Mayabunder","Car Nicobar","Campbell Bay"],
+  AP: ["Visakhapatnam","Vijayawada","Guntur","Nellore","Kurnool","Tirupati","Kakinada","Rajahmundry","Kadapa","Anantapur","Vizianagaram","Eluru","Ongole","Machilipatnam","Chittoor","Srikakulam","Tenali","Narasaraopet","Bhimavaram","Tadepalligudem","Adoni","Proddatur","Nandyal","Hindupur","Guntakal","Dhone","Markapur","Chirala","Bapatla","Palnadu","Narasapur","Pithapuram","Rajam","Palasa","Ichchapuram","Bobbili","Rajampet","Madanapalle","Punganur","Nagari"],
+  AR: ["Itanagar","Naharlagun","Pasighat","Tawang","Ziro","Aalo","Bomdila","Tezu","Roing","Changlang","Namsai","Seppa","Daporijo","Yingkiong","Khonsa","Longding","Anini","Mechuka"],
+  AS: ["Guwahati","Silchar","Dibrugarh","Jorhat","Nagaon","Tinsukia","Tezpur","Bongaigaon","Dhubri","Kokrajhar","Sivasagar","Goalpara","Barpeta","Nalbari","Karimganj","Hailakandi","North Lakhimpur","Diphu","Haflong","Numbai","Golaghat","Morigaon","Hojai","Lumding","Rangia","Dhemaji","Majuli","Biswanath Chariali","Charaideo","Udalguri"],
+  BR: ["Patna","Gaya","Bhagalpur","Muzaffarpur","Purnia","Darbhanga","Bihar Sharif","Arrah","Begusarai","Katihar","Munger","Chhapra","Bettiah","Samastipur","Sitamarhi","Madhubani","Supaul","Sheohar","Nawada","Jamui","Banka","Lakhisarai","Sheikhpura","Nalanda","Jehanabad","Arwal","Aurangabad","Gaya","Rohtas","Buxar","Kaimur","Saran","Siwan","Gopalganj","Vaishali","Hajipur","Motihari","Raxaul","Muzzaffarpur","Barauni","Khagaria","Kishanganj","Madhepura"],
+  CH: ["Chandigarh","Panchkula","Mohali","Zirakpur","Dera Bassi","Kharar","Morinda","Kurali"],
+  CG: ["Raipur","Bhilai","Bilaspur","Korba","Durg","Rajnandgaon","Raigarh","Jagdalpur","Ambikapur","Mahasamund","Dhamtari","Kanker","Kondagaon","Narayanpur","Bijapur","Dantewada","Sukma","Mungeli","Kabirdham","Balod","Bemetara","Gariaband","Baloda Bazar","Surajpur","Korea","Surguja","Jashpur","Bastar"],
+  DH: ["Daman","Diu","Silvassa","Vapi","Marwad","Khanvel"],
+  DL: ["New Delhi","Central Delhi","North Delhi","South Delhi","East Delhi","West Delhi","Dwarka","Rohini","Janakpuri","Pitampura","Laxmi Nagar","Saket","Vasant Kunj","Karol Bagh","Rajouri Garden","Uttam Nagar","Shahdara","Preet Vihar","Mayur Vihar","Noida (NCR)","Gurgaon (NCR)","Faridabad (NCR)","Ghaziabad (NCR)","Greater Noida (NCR)"],
+  GA: ["Panaji","Margao","Vasco da Gama","Mapusa","Ponda","Bicholim","Curchorem","Canacona","Pernem","Sanguem","Quepem","Mormugao","Calangute","Baga","Anjuna","Benaulim","Colva"],
+  GJ: ["Ahmedabad","Surat","Vadodara","Rajkot","Bhavnagar","Jamnagar","Junagadh","Gandhinagar","Anand","Morbi","Nadiad","Mehsana","Bharuch","Vapi","Navsari","Valsad","Surendranagar","Amreli","Bhuj","Anjar","Gandhidham","Porbandar","Veraval","Gondal","Jetpur","Wankaner","Botad","Dahod","Godhra","Kalol","Patan","Palanpur","Himmatnagar","Modasa","Idar","Visnagar","Unjha","Sidhpur","Deesa","Lunawada","Limdi","Dhrangadhra","Halvad","Morbi","Wadhwan","Chotila","Jasdan","Dhoraji","Amreli","Savarkundla","Botad","Palitana","Mahuva","Gariadhar","Talaja","Sihor"],
+  HR: ["Faridabad","Gurgaon","Panipat","Ambala","Yamunanagar","Rohtak","Hisar","Karnal","Sonipat","Panchkula","Bhiwani","Sirsa","Bahadurgarh","Jind","Thanesar","Kaithal","Rewari","Mahendragarh","Charkhi Dadri","Fatehabad","Palwal","Nuh","Narnaul","Hansi","Tohana","Ellenabad","Rania","Fatehabad","Odhan","Mandi Dabwali","Barwala","Pehowa","Kurukshetra","Shahabad","Ladwa","Jagadhri","Radaur","Chhachhrauli","Bilaspur","Gohana","Safidon","Sampla","Jhajjar","Narsinghpur","Matinhail","Pataudi","Manesar","Dharuhera","Bawal","Rewari","Alwar"],
+  HP: ["Shimla","Dharamsala","Solan","Mandi","Bilaspur","Hamirpur","Una","Kullu","Manali","Chamba","Kangra","Palampur","Baddi","Nahan","Paonta Sahib","Sundarnagar","Rampur","Kinnaur","Lahaul","Spiti","Rohroo","Rohru","Theog","Arki","Nalagarh","Kasauli","Sarkaghat","Jogindernagar","Baijnath","Nurpur","Dalhousie","Pathankot"],
+  JK: ["Srinagar","Jammu","Anantnag","Baramulla","Sopore","Kathua","Udhampur","Rajouri","Poonch","Doda","Ramban","Reasi","Budgam","Ganderbal","Kupwara","Bandipore","Kulgam","Shopian","Pulwama","Kishtwar"],
+  JH: ["Ranchi","Jamshedpur","Dhanbad","Bokaro","Deoghar","Hazaribagh","Giridih","Koderma","Chatra","Lohardaga","Gumla","Simdega","Khunti","Ramgarh","Pakur","Godda","Sahebganj","Dumka","Palamu","Garhwa","Latehar","Seraikela","Kharsawan","West Singhbhum","East Singhbhum","Saraikela"],
+  KA: ["Bangalore","Mysuru","Hubli","Dharwad","Mangalore","Belgaum","Gulbarga","Davangere","Bellary","Bijapur","Shimoga","Tumkur","Raichur","Bidar","Hassan","Mandya","Chikmagalur","Chitradurga","Udupi","Kolar","Bagalkot","Gadag","Koppal","Haveri","Yadgir","Chamarajanagar","Kodagu","Belagavi","Kalaburagi","Shivamogga","Vijayapura","Ballari","Hosapete","Gangavathi","Hospet","Ranebennur","Bhadravati","Chikkaballapur","Robertsonpet","Ramanagara","Channapatna","Holenarasipur","Sakleshpur","Madikeri","Virajpet","Piriyapatna","Kushalnagar","Bantwal","Puttur","Sullia","Uppinangady","Bhatkal","Karwar","Ankola","Sirsi","Kumta","Honnavar","Mundgod"],
+  KL: ["Thiruvananthapuram","Kochi","Kozhikode","Thrissur","Kollam","Kannur","Alappuzha","Palakkad","Malappuram","Kottayam","Pathanamthitta","Idukki","Wayanad","Kasaragod","Ernakulam","Chalakudy","Munnar","Guruvayur","Irinjalakuda","Ponnani","Manjeri","Tirur","Perinthalmanna","Tiruvalla","Changanacherry","Kayamkulam","Haripad","Karunagappally","Vadakara","Thalassery","Payyannur","Kalpetta","Sulthan Bathery","Mananthavady","Pala","Ettumanoor","Vaikom","Muvattupuzha","Perumbavoor","Kothamangalam","Aluva","Thrippunithura","Kalamassery","Angamaly","Chalakudi","Irinjalakuda","Thrissur","Ottappalam","Shoranur","Palakkad","Alathur","Mannarkkad","Tirurangadi","Kondotty","Nilambur","Wandoor","Malappuram"],
+  LA: ["Leh","Kargil","Zanskar","Nubra","Changthang","Drass","Shyok","Padum"],
+  LD: ["Kavaratti","Agatti","Minicoy","Amini","Androth","Kalpeni","Chetlat"],
+  MP: ["Indore","Bhopal","Jabalpur","Gwalior","Ujjain","Sagar","Rewa","Satna","Dewas","Ratlam","Murwara","Burhanpur","Khandwa","Chhindwara","Betul","Seoni","Balaghat","Mandla","Dindori","Shahdol","Umaria","Anuppur","Singrauli","Sidhi","Katni","Damoh","Panna","Tikamgarh","Chhatarpur","Sehore","Vidisha","Raisen","Hoshangabad","Narmadapuram","Harda","Shivpuri","Guna","Ashoknagar","Datia","Bhind","Morena","Sheopur","Neemuch","Mandsaur","Rajgarh","Agar Malwa","Alirajpur","Barwani","Jhabua","Khargone","Dhar","Pithampur","Mhow","Sanawad","Maheshwar","Mandleshwar","Omkareshwar","Pachmarhi"],
+  MH: ["Mumbai","Pune","Nagpur","Thane","Nashik","Aurangabad","Solapur","Kolhapur","Amravati","Nanded","Sangli","Satara","Latur","Jalgaon","Akola","Osmanabad","Yavatmal","Buldhana","Washim","Hingoli","Parbhani","Beed","Dhule","Nandurbar","Ratnagiri","Sindhudurg","Raigad","Palghar","Pen","Panvel","Malegaon","Ichalkaranji","Bhiwandi","Kalyan","Dombivli","Ulhasnagar","Vasai","Virar","Mira Road","Ambarnath","Badlapur","Karjat","Khopoli","Lonavala","Khandala","Talegaon","Chakan","Pimpri","Chinchwad","Hadapsar","Kothrud","Aundh","Wakad","Hinjewadi","Baramati","Ahmednagar","Shirdi","Kopargaon","Rahata","Shrirampur","Nandgaon","Manmad","Niphad","Ozar","Dindori","Igatpuri","Sinnar","Deolali","Peth","Yeola","Chalisgaon","Pachora","Parola","Dharangaon","Amalner","Chopda","Shahada","Shirpur","Navapur","Bodwad","Jamner","Bhusawal","Muktainagar","Malkapur","Khamgaon","Chikhli","Motala","Nandura","Gondia","Bhandara","Chandrapur","Gadchiroli","Wardha","Hinganghat","Sewagram","Butibori"],
+  MN: ["Imphal","Churachandpur","Thoubal","Bishnupur","Senapati","Ukhrul","Tamenglong","Chandel","Jiribam","Kangpokpi","Noney","Pherzawl","Kakching","Kamjong","Tengnoupal"],
+  ML: ["Shillong","Tura","Jowai","Nongstoin","Baghmara","Resubelpara","Williamnagar","Mairang","Nongpoh","Cherrapunjee"],
+  MZ: ["Aizawl","Lunglei","Champhai","Serchhip","Kolasib","Lawngtlai","Mamit","Saitual","Khawzawl","Hnahthial"],
+  NL: ["Kohima","Dimapur","Mokokchung","Tuensang","Wokha","Zunheboto","Phek","Mon","Kiphire","Longleng","Peren","Noklak"],
+  OD: ["Bhubaneswar","Cuttack","Rourkela","Berhampur","Sambalpur","Puri","Balasore","Baripada","Jharsuguda","Bargarh","Rayagada","Koraput","Malkangiri","Nabarangpur","Kendrapara","Bhadrak","Jajpur","Dhenkanal","Keonjhar","Sundargarh","Mayurbhanj","Angul","Nayagarh","Ganjam","Phulbani","Bolangir","Kalahandi","Nuapada","Sonepur","Boudh","Kandhamal","Gajapati","Ganjam","Paralakhemundi","Aska","Berhampur","Chhatrapur","Digapahandi","Bhanjanagar","Baliguda"],
+  PY: ["Puducherry","Karaikal","Mahe","Yanam","Ariyankuppam","Ozhukarai","Villianur"],
+  PB: ["Ludhiana","Amritsar","Jalandhar","Patiala","Bathinda","Mohali","Pathankot","Hoshiarpur","Batala","Gurdaspur","Firozpur","Fazilka","Faridkot","Muktsar","Moga","Kapurthala","Sangrur","Barnala","Mansa","Fatehgarh Sahib","Rupnagar","Nawanshahr","Tarn Taran","Malerkotla","Abohar","Phagwara","Khanna","Rajpura","Morinda","Banur","Zirakpur","Kharar","Ropar","Anandpur Sahib","Nangal","Ropar","Fatehgarh Sahib","Sirhind","Bassi Pathana","Mandi Gobindgarh","Gobindgarh","Samana","Patiala","Rajpura","Lalru","Banur","Dera Bassi","Chamkaur Sahib","Morinda","Fatehpur","Qadian","Dera Baba Nanak"],
+  RJ: ["Jaipur","Jodhpur","Kota","Bikaner","Ajmer","Udaipur","Bharatpur","Alwar","Sikar","Pali","Nagaur","Barmer","Jhunjhunu","Churu","Tonk","Bundi","Bhilwara","Sawai Madhopur","Karauli","Dholpur","Dausa","Dungarpur","Banswara","Rajsamand","Pratapgarh","Sirohi","Jalore","Hanumangarh","Sri Ganganagar","Chittorgarh","Baran","Jhalawar","Pushkar","Kishangarh","Makrana","Phalodi","Gangapur City","Hindaun","Bundi","Deoli","Sujangarh","Ratangarh","Churu","Fatehpur","Jhunjhunu","Pilani","Chirawa","Mukundgarh","Nawalgarh","Mandawa","Ramgarh","Alwar","Bhiwadi","Behror","Neemrana","Kotputli","Phulera","Dudu","Kishangarh","Nasirabad","Beawar","Mertha","Nagaur","Merta","Ladnun","Didwana","Degana","Kuchaman","Nawa","Parbatsar","Mundwa","Jayal","Khimsar","Osian","Bhopalgarh","Jodhpur","Bilara","Pipar City","Sojat","Sumerpur","Bali","Ranakpur","Sirohi","Abu Road","Mount Abu","Pindwara","Reodar","Jalore","Bhinmal","Sanchore","Sayla","Ahore"],
+  SK: ["Gangtok","Namchi","Mangan","Gyalshing","Rangpo","Jorethang","Singtam","Ravangla","Pelling","Yuksom","Lachen","Lachung"],
+  TN: ["Chennai","Coimbatore","Madurai","Tiruchirappalli","Salem","Tirunelveli","Erode","Vellore","Thoothukudi","Tiruppur","Dindigul","Thanjavur","Ranipet","Sivakasi","Karur","Cuddalore","Nagapattinam","Kanchipuram","Krishnagiri","Dharmapuri","Namakkal","Perambalur","Ariyalur","Villupuram","Tiruvannamalai","Ramanathapuram","Virudhunagar","Theni","Pudukkottai","Sivaganga","Ooty","Udhagamandalam","Kodaikanal","Tiruvarur","Nagercoil","Kanyakumari","Palani","Pollachi","Tiruppur","Avinashi","Dharapuram","Kangeyam","Palladam","Mettupalayam","Gudalur","Coonoor","Kotagiri","Hosur","Denkanikottai","Shoolagiri","Harur","Palacode","Pennagaram","Rasipuram","Mettur","Yercaud","Omalur","Magudanchavadi","Attur","Gangavalli","Sankari","Edappadi","Idappadi","Valapady","Tiruchengode","Kumarapalayam","Bhavani","Gobichettipalayam","Sathyamangalam","Nambiyur","Anthiyur","Talavadi","Modakurichi","Perundurai","Chennimalai","Kuttalam","Mayiladuthurai","Sirkazhi","Chidambaram","Kattumannarkoil","Jayankondam","Ariyalur","Annamalainagar","Cuddalore","Panruti","Nellikuppam","Virudhachalam","Tittagudi","Kallakurichi"],
+  TG: ["Hyderabad","Warangal","Nizamabad","Karimnagar","Khammam","Ramagundam","Mancherial","Adilabad","Nalgonda","Mahbubnagar","Suryapet","Miryalaguda","Siddipet","Kamareddy","Sangareddy","Medak","Vikarabad","Jogulamba","Gadwal","Wanaparthy","Narayanpet","Jangaon","Bhadradri","Kothagudem","Jayashankar","Bhupalpally","Mulugu","Nagarkurnool","Wanaparthy","Gadwal","Nagar Kurnool","Ranga Reddy","Medchal","Malkajgiri","LB Nagar","Uppal","Secunderabad","Kukatpally","Kondapur","Gachibowli","Jubilee Hills","Banjara Hills","Manikonda","Tolichowki","Vanasthalipuram","Hayathnagar","Maheshwaram"],
+  TR: ["Agartala","Udaipur","Dharmanagar","Kailashahar","Belonia","Sabroom","Kamalpur","Ambassa","Bishalgarh","Sonamura","Melaghar","Mohanpur","Jirania","Majlishpur","Teliamura"],
+  UP: ["Lucknow","Kanpur","Agra","Varanasi","Meerut","Allahabad","Prayagraj","Ghaziabad","Noida","Greater Noida","Mathura","Vrindavan","Aligarh","Bareilly","Moradabad","Saharanpur","Gorakhpur","Faizabad","Ayodhya","Jhansi","Firozabad","Muzaffarnagar","Rampur","Shahjahanpur","Sitapur","Lakhimpur Kheri","Etawah","Mainpuri","Bulandshahr","Hapur","Sambhal","Amroha","Bijnor","Unnao","Rae Bareli","Sultanpur","Bahraich","Gonda","Basti","Deoria","Azamgarh","Mau","Jaunpur","Mirzapur","Ballia","Hardoi","Pilibhit","Banda","Chitrakoot","Hamirpur","Mahoba","Lalitpur","Etah","Kasganj","Farrukhabad","Kannauj","Auraiya","Orai","Jalaun","Kalpi","Konch","Pukhrayan","Ghatampur","Bidhnu","Shivrajpur","Akbarpur","Tanda","Ambedkar Nagar","Faizabad","Bhadarsa","Soraon","Meja","Shankargarh","Koraon","Handia","Karchana","Jasra","Phulpur","Saidabad","Kaundhiyara","Manauri","Barabanki","Haidergarh","Nawabganj","Ramsanehi Ghat","Dewa","Fatehpur","Bindki","Khajuha","Khaga","Hathgam","Jasoda","Gauriganj","Amethi","Jagdishpur","Gauriganj","Salonkala"],
+  UK: ["Dehradun","Haridwar","Roorkee","Haldwani","Rudrapur","Kashipur","Rishikesh","Nainital","Kotdwar","Mussoorie","Almora","Pithoragarh","Bageshwar","Champawat","Uttarkashi","Tehri","Pauri","Chamoli","Rudraprayag","Srinagar","Devprayag","Joshimath","Gauchar","Karnprayag","Nandprayag","Tharali","Gairsain","Ramnagar","Corbett","Ranikhet","Kausani","Lohaghat","Champawat","Tanakpur","Banbasa","Khatima","Sitarganj","Bazpur","Jaspur"],
+  WB: ["Kolkata","Howrah","Durgapur","Asansol","Siliguri","Bardhaman","Malda","Baharampur","Habra","Kharagpur","Shantipur","Dankuni","Haldia","Jalpaiguri","Cooch Behar","Islampur","Balurghat","Midnapore","Bankura","Purulia","Hooghly","Chinsurah","Krishnanagar","Ranaghat","Kalyani","Barasat","Raiganj","Dalkhola","Islampur","Kaliyaganj","Gangarampur","Balurghat","Buniadpur","Hemtabad","Kushmandi","Harirampur","Kumargram","Dinhata","Tufanganj","Mekhliganj","Mathabhanga","Sitalkuchi","Sitai","Madarihat","Birpara","Falakata","Alipurduar","Kalchini","Kumargram","Rajarhat","New Town","Salt Lake","Sector V","Barasat","Madhyamgram","Birati","Dumdum","Dum Dum","Sodepur","Panihati","Kamarhati","Belgharia","Titagarh","Naihati","Kanchrapara","Halisahar","Bhatpara","Garulia","Jagatdal","Noapara","Birnagar","Chakdaha","Santipur","Nabadwip","Krishnanagar","Dhantala","Tehatta","Karimpur","Chapra","Nadia","Bangaon","Gobardanga","Maslandapur","Bongaon"]
+};
+
+// Key localities/areas per city (sample — extended for major cities)
+const CITY_AREAS = {
+  // Delhi
+  "New Delhi":["Connaught Place","Paharganj","Karol Bagh","Lajpat Nagar","Greater Kailash","Saket","Hauz Khas","South Extension","Malviya Nagar","Vasant Kunj","Vasant Vihar","Safdarjung","Defence Colony","Jangpura","Nizamuddin","Okhla","Tughlakabad","Badarpur","Fatehpur Beri","Mehrauli","Chhatarpur","Sultanpur"],
+  "North Delhi":["Civil Lines","Model Town","Mukherjee Nagar","Ashok Vihar","Pitampura","Rohini Sector 1-25","Saraswati Vihar","Tri Nagar","Wazirpur","Shakurpur","Punjabi Bagh","Rani Bagh","Shalimar Bagh","Keshav Puram","Azadpur","Jahangirpuri","Badli","Bawana","Narela"],
+  "South Delhi":["Saket","Malviya Nagar","Hauz Khas","Greater Kailash 1","Greater Kailash 2","Lajpat Nagar","Defence Colony","Kalkaji","Govindpuri","Nehru Place","Okhla Phase 1","Okhla Phase 2","Jasola","Jamia Nagar","Shaheen Bagh"],
+  "East Delhi":["Preet Vihar","Mayur Vihar Phase 1","Mayur Vihar Phase 2","Mayur Vihar Phase 3","Laxmi Nagar","Vishwas Nagar","Patparganj","Vivek Vihar","Mandawali","Kondli","Gharoli","Shakarpur","Pandav Nagar"],
+  "West Delhi":["Dwarka Sector 1-23","Janakpuri","Uttam Nagar","Palam","Vikaspuri","Tilak Nagar","Hari Nagar","Tagore Garden","Rajouri Garden","Moti Nagar","Ramesh Nagar","Kirti Nagar"],
+  "Noida (NCR)":["Sector 18","Sector 62","Sector 137","Sector 150","Sector 44","Sector 50","Sector 63","Sector 76","Sector 77","Sector 78","Sector 93","Noida Extension","Greater Noida West","Alpha 1","Alpha 2","Beta 1","Beta 2","Gamma 1","Gamma 2","Delta 1","Knowledge Park","Techzone","Pari Chowk"],
+  "Gurgaon (NCR)":["Cyber City","DLF Phase 1-5","Golf Course Road","Sohna Road","MG Road","Sector 14","Sector 15","Sector 29","Sector 31","Sector 40","Sector 42","Sector 43","Sector 45","Sector 47","Sector 49","Sector 50","Sector 52","Sector 54","Sector 56","Sector 57","Sector 58","Sector 65","Sector 67","Sector 68","Sector 69","Udyog Vihar","Manesar","Palam Vihar","South City 1","South City 2","Vatika City","Nirvana Country","Malibu Town"],
+  // Mumbai
+  "Mumbai":["Andheri East","Andheri West","Bandra East","Bandra West","Borivali","Malad","Kandivali","Goregaon","Jogeshwari","Vile Parle","Santacruz","Khar","Dadar","Sion","Kurla","Chembur","Ghatkopar","Vikhroli","Mulund","Thane Creek","Powai","Hiranandani","Chandivali","Sakinaka","Chakala","MIDC Andheri","Oshiwara","Lokhandwala","Versova","DN Nagar","Azad Nagar","Lower Parel","Worli","Prabhadevi","Parel","Lalbaug","Byculla","Mazagaon","Sewri","Wadala","Mahim","Matunga","Dharavi","Govandi","Mankhurd","Trombay","Charkop","Dahisar","Mira Road","Bhayander","Naigaon","Vasai","Nalasopara","Virar","Belapur","Vashi","Nerul","Seawoods","Kharghar","Panvel","Ulwe","Dronagiri","Taloja"],
+  "Pune":["Koregaon Park","Kalyani Nagar","Viman Nagar","Kharadi","Hadapsar","Magarpatta","Wanowrie","Kondhwa","NIBM","Baner","Balewadi","Wakad","Pimple Saudagar","Pimple Nilakh","Aundh","Kothrud","Bavdhan","Sus","Pashan","Bopodi","Alandi","Vishrantwadi","Dhanori","Lohegaon","Dighi","Phugewadi","Bhosari","Moshi","Chakan","Talegaon","Dehu Road","Chinchwad","Pimpri","Akurdi","Nigdi","Pradhikaran","Ravet","Hinjewadi Phase 1-3","Marunji","Maan","Nande","Pirangut","Lavale","Mulshi","Khed Shivapur","Sinhagad Road","Dhayari","Ambegaon","Donje","Undri","Pisoli","Mohammadwadi","Handewadi","Fursungi","Manjari","Wagholi"],
+  "Jaipur":["Malviya Nagar","Vaishali Nagar","Mansarovar","C-Scheme","MI Road","Pink City","Bapu Nagar","Tonk Road","Ajmer Road","Sirsi Road","Sanganer","Pratap Nagar","Nirman Nagar","Gandhi Nagar","Shyam Nagar","Vidyadhar Nagar","Jagatpura","Murlipura","Jhotwara","Sodala","Triveni Nagar","Adarsh Nagar","Shipra Path","Mahesh Nagar","Chitrakoot","Hanuman Nagar","Raja Park","Civil Lines","Subhash Nagar","Lal Kothi","Tilak Nagar","Sector 1-15 Pratap Nagar","New Sanganer Road","Durgapura","Saraswati Colony","Barkat Nagar"],
+  "Bangalore":["Koramangala","Indiranagar","HSR Layout","BTM Layout","Electronic City","Whitefield","Marathahalli","Sarjapur Road","Bannerghatta Road","Jayanagar","JP Nagar","Basavangudi","Malleshwaram","Rajajinagar","Yeshwanthpur","Hebbal","Yelahanka","Devanahalli","Hoodi","KR Puram","CV Raman Nagar","Banaswadi","Frazer Town","Richmond Town","Lavelle Road","UB City","MG Road","Brigade Road","Church Street","Residency Road","Ulsoor","Shivajinagar","Sadashivanagar","Dollars Colony","Nagarbhavi","Vijayanagar","Chamrajpet","Gandhinagar","Chickpete","KR Market","Shivaji Layout","RT Nagar","Thanisandra","Kalyan Nagar","HRBR Layout","Kammanahalli","Old Madras Road","Ramamurthy Nagar","Hennur","Kogilu","Jakkur","Amruthahalli"],
+  "Hyderabad":["Banjara Hills","Jubilee Hills","Madhapur","Gachibowli","Hitech City","Kondapur","Kukatpally","Begumpet","Ameerpet","SR Nagar","Secunderabad","Trimulgherry","Tarnaka","Malkajgiri","Uppal","LB Nagar","Vanasthalipuram","Dilsukhnagar","Mehdipatnam","Tolichowki","Attapur","Rajendranagar","Shamshabad","Shamirpet","Kompally","Miyapur","Bachupally","Nizampet","Suchitra","Alwal","Bowenpally","Bollaram","Patancheru","Balanagar","Jeedimetla","Suraram","Quthbullapur"],
+  "Chennai":["T Nagar","Anna Nagar","Adyar","Velachery","Thiruvanmiyur","Sholinganallur","OMR","Perungudi","Thoraipakkam","Pallikaranai","Medavakkam","Madipakkam","Chrompet","Tambaram","Pallavaram","Pammal","Alandur","Guindy","KK Nagar","Ashok Nagar","Valasaravakkam","Koyambedu","Villivakkam","Kolathur","Perambur","Tondiarpet","Royapuram","Basin Bridge","Sembiam","Pattabiram","Ambattur","Avadi","Mogappair","Maduravoyal","Poonamallee","Nandambakkam","Porur","Arumbakkam","Kilpauk","Egmore","Chetpet","Nungambakkam","Gopalapuram","Mylapore","Mandaveli","Royapettah","Triplicane","Park Town","Chintadripet","Chepauk"],
+  "Kolkata":["Salt Lake","New Town","Rajarhat","Dum Dum","Belgharia","Baranagar","Kamarhati","Sodepur","Panihati","Khardah","Naihati","Shyamnagar","Garulia","Jagatdal","Noapara","Park Street","Ballygunge","Alipore","Behala","Tollygunge","Jadavpur","Garia","Narendrapur","Sonarpur","Baruipur","Rajpur","Maheshtala","Garden Reach","Metiabruz","Cossipore","Tala","Shyambazar","Ultadanga","Maniktala","Phoolbagan","Kadapara","Topsia","Tangra","Anandapur","Patuli","Mukundapur","Kasba","Dhakuria","Selimpur","Jodhpur Park","Hindustan Park","Lake Gardens","Santoshpur","Regent Park"],
+  // Default fallback
+  "__default__":["Main Market","Civil Lines","Old City","New Colony","Station Area","Bus Stand Area","Sector A","Sector B","Sector C","Phase 1","Phase 2","Ward 1","Ward 2","Town Centre","Extension Area","New Extension","Industrial Area","Housing Board Colony","Private Colony","Posh Area","Old Town","New Town","Nagar Nigam Area","Cantonment Area","Railway Colony","Hospital Area","College Road","University Area","IT Park Area","SEZ Area","GIDC Area","MIDC Area","Bypass Road","Ring Road Area","NH Corridor"]
+};
+
+// Blinkit currently present (major cities only — all others = "not yet present")
+const BLINKIT_PRESENT_CITIES = new Set([
+  "New Delhi","North Delhi","South Delhi","East Delhi","West Delhi","Noida (NCR)","Gurgaon (NCR)","Ghaziabad (NCR)","Faridabad (NCR)","Greater Noida (NCR)",
+  "Mumbai","Pune","Bangalore","Hyderabad","Chennai","Kolkata","Ahmedabad","Jaipur","Chandigarh","Panchkula","Mohali",
+  "Lucknow","Kanpur","Agra","Varanasi","Allahabad","Prayagraj","Meerut","Surat","Vadodara","Rajkot",
+  "Nagpur","Thane","Nashik","Aurangabad","Indore","Bhopal","Jabalpur","Coimbatore","Madurai","Kochi","Thiruvananthapuram",
+  "Visakhapatnam","Vijayawada","Guntur","Warangal","Patna","Ranchi","Bhubaneswar","Cuttack","Dehradun","Haridwar"
+]);
+
+// ========================
+// STATE → CITY → AREA LOGIC
+// ========================
+
+let selectedState = '', selectedCity = '', selectedArea = '';
+
+function onStateChange(code) {
+  selectedState = code;
+  selectedCity = '';
+  selectedArea = '';
+
+  // Reset downstream
+  const cityInput = document.getElementById('cityInput');
+  const areaInput = document.getElementById('areaInput');
+  cityInput.value = '';
+  cityInput.readOnly = false;
+  cityInput.placeholder = 'Type or select a city / district…';
+  areaInput.value = '';
+  areaInput.readOnly = true;
+  areaInput.placeholder = 'Select city first…';
+
+  document.getElementById('cityGroup').style.opacity = code ? '1' : '0.4';
+  document.getElementById('cityGroup').style.pointerEvents = code ? 'auto' : 'none';
+  document.getElementById('areaGroup').style.opacity = '0.4';
+  document.getElementById('areaGroup').style.pointerEvents = 'none';
+  document.getElementById('areaTypeGroup').style.opacity = '0.4';
+  document.getElementById('areaTypeGroup').style.pointerEvents = 'none';
+  document.getElementById('blinkitNotice').style.display = 'none';
+  document.getElementById('locationBreadcrumb').style.display = 'none';
+  updateBreadcrumb();
+}
+
+function getCitiesForState(code) {
+  return STATE_CITIES[code] || [];
+}
+
+function openCityDropdown() {
+  if (!selectedState) return;
+  showCitySuggest('');
+}
+
+function onCityType(val) {
+  showCitySuggest(val);
+}
+
+function showCitySuggest(q) {
+  const box = document.getElementById('citySuggest');
+  const cities = getCitiesForState(selectedState);
+  const filtered = q ? cities.filter(c => c.toLowerCase().includes(q.toLowerCase())) : cities;
+  if (!filtered.length) { box.style.display = 'none'; return; }
+  box.innerHTML = filtered.map(c =>
+    `<div onclick="selectCity('${c.replace(/'/g,"\\'")}'); " style="
+      padding:10px 16px;cursor:pointer;font-size:0.87rem;
+      border-bottom:1px solid #21262D;color:#E6EDF3;
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+    " onmouseover="this.style.background='rgba(249,208,0,0.08)'"
+       onmouseout="this.style.background='transparent'">
+      <span>📍 ${c}</span>
+      ${BLINKIT_PRESENT_CITIES.has(c) ? '<span style="font-size:0.7rem;padding:2px 7px;border-radius:20px;background:rgba(57,211,83,0.12);color:#39D353;border:1px solid rgba(57,211,83,0.25)">Blinkit Active</span>' : '<span style="font-size:0.7rem;padding:2px 7px;border-radius:20px;background:rgba(249,208,0,0.1);color:#F9D000;border:1px solid rgba(249,208,0,0.25)">Opportunity Zone</span>'}
+    </div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function selectCity(name) {
+  selectedCity = name;
+  selectedArea = '';
+  document.getElementById('cityInput').value = name;
+  document.getElementById('citySuggest').style.display = 'none';
+
+  // Unlock area
+  const areaInput = document.getElementById('areaInput');
+  areaInput.readOnly = false;
+  areaInput.value = '';
+  areaInput.placeholder = 'Type or select locality / area…';
+  document.getElementById('areaGroup').style.opacity = '1';
+  document.getElementById('areaGroup').style.pointerEvents = 'auto';
+  document.getElementById('areaTypeGroup').style.opacity = '0.4';
+  document.getElementById('areaTypeGroup').style.pointerEvents = 'none';
+
+  // Show Blinkit notice
+  const noticeBox = document.getElementById('blinkitNoticeBox');
+  const noticeWrap = document.getElementById('blinkitNotice');
+  if (BLINKIT_PRESENT_CITIES.has(name)) {
+    noticeBox.style.background = 'rgba(57,211,83,0.07)';
+    noticeBox.style.border = '1px solid rgba(57,211,83,0.25)';
+    noticeBox.style.color = '#39D353';
+    noticeBox.innerHTML = `✅ <strong>Blinkit is already active in ${name}.</strong> You can still analyze a new locality or neighbourhood within the city to identify underserved micro-zones where a new dark store could improve delivery coverage.`;
+  } else {
+    noticeBox.style.background = 'rgba(249,208,0,0.06)';
+    noticeBox.style.border = '1px solid rgba(249,208,0,0.25)';
+    noticeBox.style.color = '#F9D000';
+    noticeBox.innerHTML = `⚡ <strong>Blinkit is NOT yet present in ${name}.</strong> This is a first-mover opportunity! Fill in the area details below to calculate the full placement viability score.`;
+  }
+  noticeWrap.style.display = 'block';
+  updateBreadcrumb();
+}
+
+function openAreaDropdown() {
+  if (!selectedCity) return;
+  showAreaSuggest('');
+}
+
+function onAreaType(val) {
+  showAreaSuggest(val);
+}
+
+function showAreaSuggest(q) {
+  const box = document.getElementById('areaSuggest');
+  const areas = CITY_AREAS[selectedCity] || CITY_AREAS['__default__'];
+  const filtered = q ? areas.filter(a => a.toLowerCase().includes(q.toLowerCase())) : areas;
+  if (!filtered.length) { box.style.display = 'none'; return; }
+  box.innerHTML = filtered.map(a =>
+    `<div onclick="selectArea('${a.replace(/'/g,"\\'")}'); " style="
+      padding:10px 16px;cursor:pointer;font-size:0.87rem;
+      border-bottom:1px solid #21262D;color:#E6EDF3;
+      display:flex;align-items:center;gap:8px;
+    " onmouseover="this.style.background='rgba(249,208,0,0.08)'"
+       onmouseout="this.style.background='transparent'">
+      🏘️ ${a}
+    </div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function selectArea(name) {
+  selectedArea = name;
+  document.getElementById('areaInput').value = name;
+  document.getElementById('areaSuggest').style.display = 'none';
+  document.getElementById('areaTypeGroup').style.opacity = '1';
+  document.getElementById('areaTypeGroup').style.pointerEvents = 'auto';
+  updateBreadcrumb();
+}
+
+function updateBreadcrumb() {
+  const bc = document.getElementById('locationBreadcrumb');
+  const stateNames = {"AN":"Andaman & Nicobar","AP":"Andhra Pradesh","AR":"Arunachal Pradesh","AS":"Assam","BR":"Bihar","CH":"Chandigarh","CG":"Chhattisgarh","DH":"Dadra & Nagar Haveli","DL":"Delhi","GA":"Goa","GJ":"Gujarat","HR":"Haryana","HP":"Himachal Pradesh","JK":"Jammu & Kashmir","JH":"Jharkhand","KA":"Karnataka","KL":"Kerala","LA":"Ladakh","LD":"Lakshadweep","MP":"Madhya Pradesh","MH":"Maharashtra","MN":"Manipur","ML":"Meghalaya","MZ":"Mizoram","NL":"Nagaland","OD":"Odisha","PY":"Puducherry","PB":"Punjab","RJ":"Rajasthan","SK":"Sikkim","TN":"Tamil Nadu","TG":"Telangana","TR":"Tripura","UP":"Uttar Pradesh","UK":"Uttarakhand","WB":"West Bengal"};
+  if (!selectedState) { bc.style.display = 'none'; return; }
+  bc.style.display = 'flex';
+  document.getElementById('bcState').textContent = '📍 ' + (stateNames[selectedState] || selectedState);
+  const a1 = document.getElementById('bcArrow1'); const a2 = document.getElementById('bcArrow2');
+  const bcC = document.getElementById('bcCity'); const bcA = document.getElementById('bcArea');
+  if (selectedCity) { a1.style.display='inline'; bcC.textContent = selectedCity; } else { a1.style.display='none'; bcC.textContent=''; }
+  if (selectedArea) { a2.style.display='inline'; bcA.textContent = selectedArea; } else { a2.style.display='none'; bcA.textContent=''; }
+}
+
+// ========================
+// INDIA CITIES DATABASE
+// 700+ cities, towns, districts across all states
+// ========================
+const INDIA_CITIES = [
+  // Metros & Tier-1
+  "Mumbai","Delhi","Bangalore","Hyderabad","Chennai","Kolkata","Pune","Ahmedabad","Surat","Jaipur",
+  // UP
+  "Lucknow","Kanpur","Agra","Varanasi","Meerut","Allahabad","Ghaziabad","Noida","Greater Noida",
+  "Mathura","Vrindavan","Aligarh","Bareilly","Moradabad","Saharanpur","Gorakhpur","Faizabad",
+  "Ayodhya","Jhansi","Firozabad","Muzaffarnagar","Rampur","Shahjahanpur","Sitapur","Lakhimpur",
+  "Etawah","Mainpuri","Bulandshahr","Hapur","Sambhal","Amroha","Bijnor","Unnao","Rae Bareli",
+  "Sultanpur","Bahraich","Gonda","Basti","Deoria","Azamgarh","Mau","Jaunpur","Mirzapur",
+  "Ballia","Hardoi","Pilibhit","Banda","Chitrakoot","Hamirpur","Mahoba","Lalitpur",
+  // Rajasthan
+  "Jodhpur","Kota","Bikaner","Ajmer","Udaipur","Bharatpur","Alwar","Sikar","Pali","Nagaur",
+  "Barmer","Jhunjhunu","Churu","Tonk","Bundi","Bhilwara","Sawai Madhopur","Karauli","Dholpur",
+  "Dausa","Dungarpur","Banswara","Rajsamand","Pratapgarh","Sirohi","Jalore","Hanumangarh",
+  "Sri Ganganagar","Chittorgarh","Baran","Jhalawar","Pushkar","Kishangarh","Makrana","Phalodi",
+  // Maharashtra
+  "Nashik","Nagpur","Thane","Navi Mumbai","Aurangabad","Solapur","Kolhapur","Amravati","Nanded",
+  "Sangli","Satara","Latur","Jalgaon","Akola","Osmanabad","Yavatmal","Buldhana","Washim","Hingoli",
+  "Parbhani","Beed","Dhule","Nandurbar","Ratnagiri","Sindhudurg","Raigad","Pen","Panvel",
+  "Malegaon","Ichalkaranji","Bhiwandi","Kalyan","Dombivli","Ulhasnagar","Vasai","Virar","Mira Road",
+  "Pune Cantonment","Pimpri","Chinchwad","Lonavala","Khandwa","Gondia","Bhandara","Chandrapur","Wardha",
+  // Gujarat
+  "Vadodara","Rajkot","Bhavnagar","Jamnagar","Junagadh","Gandhinagar","Anand","Morbi","Nadiad",
+  "Mehsana","Bharuch","Vapi","Navsari","Valsad","Surendranagar","Amreli","Bhuj","Anjar",
+  "Gandhidham","Porbandar","Veraval","Gondal","Jetpur","Wankaner","Botad","Dahod","Godhra",
+  "Kalol","Patan","Palanpur","Himmatnagar","Modasa","Idar","Visnagar","Unjha","Sidhpur",
+  // Karnataka
+  "Mysuru","Hubli","Dharwad","Mangalore","Belgaum","Gulbarga","Davangere","Bellary","Bijapur",
+  "Shimoga","Tumkur","Raichur","Bidar","Hassan","Mandya","Chikmagalur","Chitradurga","Udupi",
+  "Kolar","Bagalkot","Gadag","Koppal","Haveri","Yadgir","Chamarajanagar","Kodagu","Mysore",
+  "Belagavi","Kalaburagi","Shivamogga","Vijayapura","Ballari","Hosapete","Gangavathi","Hospet",
+  // Tamil Nadu
+  "Coimbatore","Madurai","Tiruchirappalli","Salem","Tirunelveli","Erode","Vellore","Thoothukudi",
+  "Tiruppur","Dindigul","Thanjavur","Ranipet","Sivakasi","Karur","Cuddalore","Nagapattinam",
+  "Kanchipuram","Krishnagiri","Dharmapuri","Namakkal","Perambalur","Ariyalur","Villupuram",
+  "Tiruvannamalai","Ramanathapuram","Virudhunagar","Theni","Pudukkottai","Sivaganga","Ooty",
+  // Andhra Pradesh
+  "Visakhapatnam","Vijayawada","Guntur","Nellore","Kurnool","Tirupati","Kakinada","Rajahmundry",
+  "Kadapa","Anantapur","Vizianagaram","Eluru","Ongole","Machilipatnam","Chittoor","Srikakulam",
+  "Tenali","Narasaraopet","Bhimavaram","Tadepalligudem","Adoni","Proddatur","Nandyal","Hindupur",
+  // Telangana
+  "Warangal","Nizamabad","Karimnagar","Khammam","Ramagundam","Mancherial","Adilabad","Nalgonda",
+  "Mahbubnagar","Suryapet","Miryalaguda","Siddipet","Kamareddy","Sangareddy","Medak","Vikarabad",
+  "Jogulamba","Gadwal","Wanaparthy","Narayanpet","Mahabubnagar",
+  // Kerala
+  "Thiruvananthapuram","Kochi","Kozhikode","Thrissur","Kollam","Kannur","Alappuzha","Palakkad",
+  "Malappuram","Kottayam","Pathanamthitta","Idukki","Wayanad","Kasaragod","Ernakulam",
+  "Chalakudy","Munnar","Guruvayur","Irinjalakuda","Ponnani","Manjeri","Tirur","Perinthalmanna",
+  // West Bengal
+  "Howrah","Durgapur","Asansol","Siliguri","Bardhaman","Malda","Baharampur","Habra","Kharagpur",
+  "Shantipur","Dankuni","Haldia","Jalpaiguri","Cooch Behar","Islampur","Balurghat","Midnapore",
+  "Bankura","Purulia","Hooghly","Chinsurah","Krishnanagar","Ranaghat","Kalyani","Barasat",
+  // Bihar
+  "Patna","Gaya","Bhagalpur","Muzaffarpur","Purnia","Darbhanga","Bihar Sharif","Arrah","Begusarai",
+  "Katihar","Munger","Chhapra","Bettiah","Samastipur","Sitamarhi","Supaul","Madhubani","Sheohar",
+  "Nawada","Jamui","Banka","Lakhisarai","Sheikhpura","Nalanda","Rajgir","Jehanabad","Arwal",
+  // Jharkhand
+  "Ranchi","Jamshedpur","Dhanbad","Bokaro","Deoghar","Hazaribagh","Giridih","Koderma","Chatra",
+  "Lohardaga","Gumla","Simdega","Khunti","Ramgarh","Pakur","Godda","Sahebganj","Dumka",
+  // Odisha
+  "Bhubaneswar","Cuttack","Rourkela","Berhampur","Sambalpur","Puri","Balasore","Baripada",
+  "Jharsuguda","Bargarh","Rayagada","Koraput","Malkangiri","Nabarangpur","Kendrapara","Bhadrak",
+  "Jajpur","Dhenkanal","Keonjhar","Sundargarh","Mayurbhanj","Angul","Nayagarh","Ganjam",
+  // Madhya Pradesh
+  "Indore","Bhopal","Jabalpur","Gwalior","Ujjain","Sagar","Rewa","Satna","Dewas","Ratlam",
+  "Murwara","Burhanpur","Khandwa","Chhindwara","Betul","Seoni","Balaghat","Mandla","Dindori",
+  "Shahdol","Umaria","Anuppur","Singrauli","Sidhi","Katni","Damoh","Panna","Tikamgarh","Chhatarpur",
+  "Sehore","Vidisha","Raisen","Hoshangabad","Narmadapuram","Harda","Shivpuri","Guna","Ashoknagar",
+  "Datia","Bhind","Morena","Sheopur","Neemuch","Mandsaur","Rajgarh",
+  // Chhattisgarh
+  "Raipur","Bhilai","Bilaspur","Korba","Durg","Rajnandgaon","Raigarh","Jagdalpur","Ambikapur",
+  "Mahasamund","Dhamtari","Kanker","Kondagaon","Narayanpur","Bijapur","Dantewada","Sukma",
+  // Punjab
+  "Ludhiana","Amritsar","Jalandhar","Patiala","Bathinda","Mohali","Pathankot","Hoshiarpur",
+  "Batala","Gurdaspur","Firozpur","Fazilka","Faridkot","Muktsar","Moga","Kapurthala","Sangrur",
+  "Barnala","Mansa","Fatehgarh Sahib","Rupnagar","Nawanshahr","Tarn Taran","Malerkotla",
+  // Haryana
+  "Faridabad","Gurgaon","Panipat","Ambala","Yamunanagar","Rohtak","Hisar","Karnal","Sonipat",
+  "Panchkula","Bhiwani","Sirsa","Bahadurgarh","Jind","Thanesar","Kaithal","Rewari","Mahendragarh",
+  "Charkhi Dadri","Fatehabad","Palwal","Nuh","Mewat",
+  // Himachal Pradesh
+  "Shimla","Dharamsala","Solan","Mandi","Bilaspur","Hamirpur","Una","Kullu","Manali","Chamba",
+  "Kangra","Palampur","Baddi","Nahan","Paonta Sahib","Sundarnagar","Rampur","Kinnaur",
+  // Uttarakhand
+  "Dehradun","Haridwar","Roorkee","Haldwani","Rudrapur","Kashipur","Rishikesh","Nainital",
+  "Kotdwar","Mussoorie","Almora","Pithoragarh","Bageshwar","Champawat","Uttarkashi","Tehri",
+  "Pauri","Chamoli","Rudraprayag",
+  // Assam
+  "Guwahati","Silchar","Dibrugarh","Jorhat","Nagaon","Tinsukia","Tezpur","Bongaigaon","Dhubri",
+  "Kokrajhar","Sivasagar","Goalpara","Barpeta","Nalbari","Karimganj","Hailakandi","Cachar",
+  // North East
+  "Imphal","Aizawl","Kohima","Agartala","Shillong","Itanagar","Gangtok","Dispur",
+  "Dimapur","Churachandpur","Thoubal","Lunglei","Tuensang","Ukhrul","Senapati","Bishnupur",
+  // Goa
+  "Panaji","Margao","Vasco da Gama","Mapusa","Ponda","Bicholim","Curchorem","Canacona",
+  // J&K & Ladakh
+  "Srinagar","Jammu","Anantnag","Baramulla","Sopore","Kathua","Udhampur","Rajouri","Poonch",
+  "Doda","Ramban","Reasi","Leh","Kargil",
+  // Andaman & Nicobar, Lakshadweep, Daman & Diu, Dadra, Chandigarh, Puducherry
+  "Port Blair","Kavaratti","Daman","Diu","Silvassa","Chandigarh","Puducherry","Karaikal","Mahe","Yanam",
+  // Other notable towns
+  "Haridwar","Mathura","Tirupati","Dwarka","Shirdi","Amarnath","Vaishno Devi","Bodh Gaya",
+  "Rameswaram","Madurai","Kashi","Prayagraj","Rishikesh","Kurukshetra","Vrindavan","Nasik",
+  "Palitana","Somnath","Badrinath","Kedarnath","Gangotri","Yamunotri",
+  // Industrial / satellite towns
+  "Manesar","Bhiwadi","Dharuhera","Bawal","Neemrana","Khushkhera","Binola","Pathredi",
+  "Sriperumbudur","Oragadam","Mahindra World City","Narsapura","Chakan","Talegaon","Ranjangaon",
+  "Butibori","MIDC Nagpur","Auric City","Dholera","Mandal","GIFT City Gandhinagar",
+];
+
+function handleCityInput(val) {
+  const box = document.getElementById('citySuggest');
+  if (!val || val.length < 2) { box.style.display = 'none'; return; }
+  const q = val.toLowerCase();
+  const matches = INDIA_CITIES.filter(c => c.toLowerCase().includes(q)).slice(0, 12);
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.innerHTML = matches.map(c =>
+    `<div onclick="selectCity('${c}')" style="
+      padding:10px 16px; cursor:pointer; font-size:0.88rem;
+      border-bottom:1px solid #21262D; transition:background 0.15s;
+      display:flex; align-items:center; gap:8px; color:#E6EDF3;
+    " onmouseover="this.style.background='rgba(249,208,0,0.08)'"
+       onmouseout="this.style.background='transparent'">
+      <span style="color:#7D8590;font-size:12px;">📍</span> ${c}
+    </div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function selectCity(name) {
+  document.getElementById('city').value = name;
+  closeSuggest();
+}
+
+function closeSuggest() {
+  document.getElementById('citySuggest').style.display = 'none';
+}
+
+// ========================
+// INIT
+// ========================
+populateTable();
+window.addEventListener('resize', () => {
+  if (document.getElementById('mapSection').style.display !== 'none') {
+    // redraw on resize if visible — use last score
+  }
+});
+</script>
+</body>
+</html>
