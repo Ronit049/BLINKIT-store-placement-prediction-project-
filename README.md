@@ -88,7 +88,20 @@ store-placement-visualizer/
 ![Sample Map Output](images/map_visual.png)
 
 ---
+![Blinkit Store Placement Screenshot](blinkit-store_placement_ss.png)
+---
+## Screenshot
 
+![Top Predict Zone Screenshot](top_predict_zone.png)
+
+This screenshot shows the top predicted zone for Blinkit store placement, helping users identify the most suitable area for opening a new store or delivery hub.
+---
+## Screenshot
+
+![Coverage Map Screenshot](Coverage_map.png)
+
+This screenshot shows the delivery coverage map, helping users understand the service area and reach of the selected Blinkit store location.
+---
 ## 📦 Installation
 
 ```bash
