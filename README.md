@@ -1,5 +1,51 @@
+<p align="center">
+  <img src="Blinkit store placement.jpg" width="100%">
+</p>
 
-<img src="Blinkit store placement.jpg" alt="Blinkit">
+<h1 align="center">
+🛒 BLINKIT Store Placement Prediction
+</h1>
+
+<p align="center">
+A Machine Learning project that recommends the best locations for new Blinkit stores using clustering, geospatial analysis, and business intelligence.
+</p>
+
+<p align="center">
+
+![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
+![Machine Learning](https://img.shields.io/badge/Machine-Learning-orange)
+![Scikit Learn](https://img.shields.io/badge/Scikit--Learn-F7931E?logo=scikitlearn)
+![Pandas](https://img.shields.io/badge/Pandas-150458?logo=pandas)
+![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy)
+![Folium](https://img.shields.io/badge/Folium-77B829)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+</p>
+
+---
+
+# 📑 Table of Contents
+
+- Overview
+- Features
+- Problem Statement
+- Project Workflow
+- Tech Stack
+- Installation
+- Dataset
+- Results
+- Screenshots
+- Future Improvements
+- Contributing
+- License
+- Author
+
+---
+
+
+
+
 <h2>📃 License</h2>
 <p>This project is open-source and available under the <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a>.</p>
 <h2>📬 Contact</h2>
@@ -180,7 +226,32 @@ The proposed store location is marked on the map using a red marker. A circular 
 The store is placed near the center of the high-demand zone so that maximum customers can be served in minimum delivery time.
 
 
+
+
+GitHub
+
+https://github.com/Ronit049
+
+LinkedIn
+
+https://www.linkedin.com/in/ronit-raj-114181315
+
+X
+
+https://x.com/its_rsr04
+
+---
+
+# 📜 License
+
+This project is licensed under the MIT License.
+
+---
+
+<p align="center">
+
+Made with ❤️ by Ronit Raj
+
+</p>
 👥 Team
 Ronit Raj – Data Science & Visualization
-
-
